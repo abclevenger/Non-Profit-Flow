@@ -123,8 +123,9 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
       ...(body.name !== undefined ? { name: body.name.trim() } : {}),
       ...(body.missionSnippet !== undefined ? { missionSnippet: body.missionSnippet } : {}),
       ...(body.logoUrl !== undefined ? { logoUrl: body.logoUrl === null ? null : body.logoUrl.trim() || null } : {}),
-      ...(primary !== undefined ? { primaryColor: primary } : {}),
-      ...(secondary !== undefined ? { secondaryColor: secondary } : {}),
+      // primaryColor / secondaryColor are required strings in Prisma; normalizeHex is string | null — narrowed after 400 checks above
+      ...(typeof primary === "string" ? { primaryColor: primary } : {}),
+      ...(typeof secondary === "string" ? { secondaryColor: secondary } : {}),
       ...(body.accentColor !== undefined ? { accentColor: accent ?? null } : {}),
     },
   });
