@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useOrganizationBranding } from "@/lib/organization-branding-context";
 import { canManageIssueRouting } from "@/lib/expert-review/permissions";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useDashboardProfile } from "@/lib/workspace/useDashboardProfile";
 import {
   foregroundForBackground,
   normalizeHex,
@@ -46,7 +47,8 @@ function applyFile(file: File | null, onDataUrl: (s: string) => void, onHint: (s
 }
 
 export function OrganizationSettingsView() {
-  const { organization, organizationId, profile, demoProfileKey, refreshSession } = useWorkspace();
+  const { organization, organizationId, demoProfileKey, refreshSession } = useWorkspace();
+  const { profile } = useDashboardProfile();
   const { refresh, loading: brandingLoading } = useOrganizationBranding();
   const { data: session } = useSession();
   const formId = useId();

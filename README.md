@@ -1,4 +1,4 @@
-# Governance
+# Non-Profit Flow
 
 A **standalone demo web app** for **Mission Impact Legal Advisors** Ã¢â‚¬â€ a calm, board-facing **strategic oversight** prototype for nonprofit leaders. It uses **local mock data only** (local mock data for the dashboard; **authentication** protects the app (see Authentication below)).
 

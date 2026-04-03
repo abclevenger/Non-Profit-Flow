@@ -1,4 +1,4 @@
-import type { Session } from "next-auth";
+import type { Session } from "@/lib/auth/app-session";
 import { isMemberRole } from "@/lib/auth/roles";
 import { canFlagForGcReview } from "@/lib/gc-review/permissions";
 

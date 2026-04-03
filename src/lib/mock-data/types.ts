@@ -1,5 +1,5 @@
 /**
- * Central type definitions for the Governance (nonprofit board) demo.
+ * Central type definitions for the Non-Profit Flow (nonprofit board) demo.
  * When adding a new nonprofit preview, mirror this shape in a new profile file
  * and wire it up in dashboardData.ts.
  */

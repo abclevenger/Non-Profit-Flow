@@ -20,6 +20,7 @@ import {
   isModuleEnabledForPath,
 } from "@/lib/organization-settings/modules";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useDashboardProfile } from "@/lib/workspace/useDashboardProfile";
 
 type OrganizationBrandingContextValue = {
   loading: boolean;
@@ -35,7 +36,8 @@ type OrganizationBrandingContextValue = {
 const OrganizationBrandingContext = createContext<OrganizationBrandingContextValue | null>(null);
 
 export function OrganizationBrandingProvider({ children }: { children: ReactNode }) {
-  const { organization, profile, refreshSession, status } = useWorkspace();
+  const { organization, refreshSession, status } = useWorkspace();
+  const { profile } = useDashboardProfile();
 
   const refresh = useCallback(async () => {
     await refreshSession();

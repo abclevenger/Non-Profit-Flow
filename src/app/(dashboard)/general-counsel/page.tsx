@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GcReviewStatusPill } from "@/components/gc-review/GcReviewStatusPill";
 import { useGcReviewData } from "@/components/gc-review/GcReviewProviders";
@@ -66,7 +66,10 @@ export default function GeneralCounselPage() {
     void loadFull();
   }, [loadFull, dataVersion]);
 
-  const queueAllowed = status === "authenticated" && session?.user?.role && canAccessGcReviewQueue(session.user.role);
+  const queueAllowed =
+    status === "authenticated" &&
+    session?.user?.role != null &&
+    canAccessGcReviewQueue(session.user.role);
 
   const filteredSorted = useMemo(() => {
     let rows = [...items];

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -45,6 +46,17 @@ export function RegisterForm() {
 
   return (
     <div className="rounded-2xl border border-stone-200/90 bg-white p-8 shadow-sm ring-1 ring-stone-100">
+      <div className="mb-6 flex flex-col items-center gap-2">
+        <Image
+          src="/govflow-logo.png"
+          alt=""
+          width={112}
+          height={132}
+          className="h-[4.5rem] w-auto object-contain"
+          priority
+        />
+        <p className="font-serif text-lg font-semibold text-stone-900">Non-Profit Flow</p>
+      </div>
       <h1 className="font-serif text-2xl font-semibold text-stone-900">Create account</h1>
       <p className="mt-2 text-sm text-stone-600">New accounts are created as board members. An administrator can change your role.</p>
       {error ? (

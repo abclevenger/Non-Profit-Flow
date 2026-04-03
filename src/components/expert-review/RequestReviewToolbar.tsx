@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { EXPERT_REVIEW_ACTION_LABEL } from "@/lib/expert-review/constants";
 import { canSubmitExpertReview } from "@/lib/expert-review/permissions";
 import type { ExpertReviewPublicJson } from "@/lib/expert-review/serialize";

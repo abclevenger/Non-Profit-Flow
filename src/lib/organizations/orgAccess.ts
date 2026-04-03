@@ -1,4 +1,4 @@
-import type { Session } from "next-auth";
+import type { Session } from "@/lib/auth/app-session";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 

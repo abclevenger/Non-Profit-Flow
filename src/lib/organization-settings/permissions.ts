@@ -1,4 +1,4 @@
-import type { Session } from "next-auth";
+import type { Session } from "@/lib/auth/app-session";
 
 /** Owner / org Admin — branding & module toggles for the active organization. */
 export function canManageOrganizationSettings(session: Session | null): boolean {

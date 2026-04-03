@@ -5,6 +5,7 @@ import { SessionWatermarkOverlay, useIdleSignOut } from "@/components/content-pr
 import { ExpertReviewProviders } from "@/components/expert-review/ExpertReviewProviders";
 import { GcReviewProviders } from "@/components/gc-review/GcReviewProviders";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useDashboardProfile } from "@/lib/workspace/useDashboardProfile";
 import { useOrganizationBranding } from "@/lib/organization-branding-context";
 import { DashboardHeader } from "./DashboardHeader";
 import { DashboardSidebar } from "./DashboardSidebar";
@@ -13,7 +14,8 @@ import { ModuleRouteGuard } from "./ModuleRouteGuard";
 export type DashboardShellProps = { children: ReactNode };
 
 export function DashboardShell({ children }: DashboardShellProps) {
-  const { profile, organization } = useWorkspace();
+  const { organization } = useWorkspace();
+  const { profile } = useDashboardProfile();
   const missionSnippet = organization?.missionSnippet?.trim() || profile.missionSnippet;
   const branding = useOrganizationBranding();
   useIdleSignOut();
@@ -37,6 +39,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
             <DashboardHeader
               orgName={branding.effectiveOrganizationName}
               reportingPeriod={profile.reportingPeriod}
+              isDemoTenant={organization?.isDemoTenant ?? true}
             />
             <ModuleRouteGuard>
               <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 lg:px-8">{children}</div>

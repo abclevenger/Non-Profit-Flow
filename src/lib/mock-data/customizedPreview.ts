@@ -12,7 +12,7 @@ export const customizedPreview: OrganizationProfile = {
   organizationName: "Riverside Youth & Family Services",
   missionSnippet:
     "We help young people and families build stability through mentoring, counseling, and community supports.",
-  logo: { type: "placeholder", alt: "Riverside Youth & Family Services logo" },
+  logo: { type: "url", src: "/govflow-logo.png", alt: "Non-Profit Flow" },
   reportingPeriod: "Spring 2026 (through April 15)",
   boardChair: "Dr. Amara Okonkwo",
   executiveDirector: "Chris Mendez",

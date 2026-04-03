@@ -118,7 +118,13 @@ export function effectiveLogoFromTenant(
 ): OrganizationProfile["logo"] {
   const url = org?.logoUrl?.trim();
   const name = effectiveOrganizationNameFromTenant(org, profile);
-  if (url && (url.startsWith("data:") || url.startsWith("https://") || url.startsWith("http://"))) {
+  if (
+    url &&
+    (url.startsWith("data:") ||
+      url.startsWith("https://") ||
+      url.startsWith("http://") ||
+      url.startsWith("/"))
+  ) {
     return { type: "url", src: url, alt: `${name} logo` };
   }
   return profile.logo;
@@ -137,7 +143,13 @@ export function effectiveLogo(
   saved: OrganizationSettingsPublic | null,
 ): OrganizationProfile["logo"] {
   const url = saved?.logoUrl?.trim();
-  if (url && (url.startsWith("data:") || url.startsWith("https://") || url.startsWith("http://"))) {
+  if (
+    url &&
+    (url.startsWith("data:") ||
+      url.startsWith("https://") ||
+      url.startsWith("http://") ||
+      url.startsWith("/"))
+  ) {
     return {
       type: "url",
       src: url,

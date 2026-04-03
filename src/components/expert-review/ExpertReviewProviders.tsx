@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import {
   createContext,
   useCallback,
@@ -13,6 +13,7 @@ import {
 import { canSubmitExpertReview } from "@/lib/expert-review/permissions";
 import type { ExpertReviewPublicJson } from "@/lib/expert-review/serialize";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useDashboardProfile } from "@/lib/workspace/useDashboardProfile";
 import { RequestReviewModal, type RequestReviewTarget } from "./RequestReviewModal";
 
 type OpenRequestModalFn = (p: Omit<RequestReviewTarget, "organizationId" | "organizationName">) => void;
@@ -43,7 +44,8 @@ export function useExpertReviewData() {
 }
 
 export function ExpertReviewProviders({ children }: { children: ReactNode }) {
-  const { organizationId, profile } = useWorkspace();
+  const { organizationId, organization } = useWorkspace();
+  const { profile } = useDashboardProfile();
   const { data: session, status } = useSession();
   const [items, setItems] = useState<ExpertReviewPublicJson[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -115,12 +117,12 @@ export function ExpertReviewProviders({ children }: { children: ReactNode }) {
       if (!organizationId) return;
       setModalTarget({
         organizationId,
-        organizationName: profile.organizationName,
+        organizationName: organization?.name ?? profile.organizationName,
         ...partial,
       });
       setModalOpen(true);
     },
-    [organizationId, profile.organizationName],
+    [organization?.name, organizationId, profile.organizationName],
   );
 
   const closeModal = useCallback(() => {

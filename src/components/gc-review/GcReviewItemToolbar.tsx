@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { GC_FLAG_ACTION_LABEL, type GcItemType } from "@/lib/gc-review/constants";
 import { canFlagForGcReview } from "@/lib/gc-review/permissions";
 import type { GcReviewPublicJson } from "@/lib/gc-review/serialize";

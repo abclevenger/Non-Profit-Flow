@@ -1,37 +1,39 @@
-import { cookies } from "next/headers";
+import { auth } from "@/auth";
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { SupabaseDemoPanels } from "./SupabaseDemoPanels";
+
+export const dynamic = "force-dynamic";
 
 export default async function SupabaseDemoPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  const { data: todos, error } = await supabase.from("todos").select();
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login?callbackUrl=/supabase-demo");
+  }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-6">
+    <div className="mx-auto max-w-lg space-y-6 p-6">
       <p className="text-sm text-stone-600">
         <Link href="/overview" className="font-semibold text-stone-800 underline">
           Back to dashboard
         </Link>
       </p>
-      <h1 className="font-serif text-2xl font-semibold text-stone-900">Supabase demo</h1>
-      <p className="text-sm text-stone-600">
-        Sample read of <code className="rounded bg-stone-100 px-1">todos</code>. Create the table in Supabase if it does not exist.
-      </p>
-      {error ? (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950 ring-1 ring-amber-200/80">
-          {error.message}
+      <div>
+        <h1 className="font-serif text-2xl font-semibold text-stone-900">Supabase integration</h1>
+        <p className="mt-2 text-sm text-stone-600">
+          Live checks against your Supabase project. Create a <code className="rounded bg-stone-100 px-1">todos</code> table
+          (SQL in <code className="rounded bg-stone-100 px-1">.env.example</code>) if you want list/insert demos.
         </p>
-      ) : (
-        <ul className="list-disc space-y-1 pl-5 text-stone-800">
-          {todos?.length ? (
-            todos.map((todo: { id: string; name?: string }) => <li key={todo.id}>{todo.name ?? todo.id}</li>)
-          ) : (
-            <li className="list-none pl-0 text-stone-500">No rows (empty table or no table yet).</li>
-          )}
-        </ul>
-      )}
+        {!isSupabaseConfigured() ? (
+          <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-950 ring-1 ring-amber-200/80">
+            <strong>Not configured.</strong> Set <code className="rounded bg-amber-100/80 px-1">NEXT_PUBLIC_SUPABASE_URL</code>{" "}
+            and <code className="rounded bg-amber-100/80 px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in Vercel, redeploy, then
+            refresh this page.
+          </p>
+        ) : null}
+      </div>
+      <SupabaseDemoPanels />
     </div>
   );
 }

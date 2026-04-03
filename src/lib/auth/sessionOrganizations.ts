@@ -18,6 +18,8 @@ export type SessionOrganizationSummary = {
   name: string;
   slug: string;
   demoProfileKey: string | null;
+  isDemoTenant: boolean;
+  useSupabaseTenantData: boolean;
 };
 
 export type SessionActiveOrganization = {
@@ -30,6 +32,9 @@ export type SessionActiveOrganization = {
   secondaryColor: string;
   accentColor: string | null;
   demoProfileKey: string | null;
+  isDemoTenant: boolean;
+  demoEditingEnabled: boolean;
+  useSupabaseTenantData: boolean;
   modules: DashboardModulesState;
   themeMode: string;
   defaultLandingPage: string;
@@ -65,6 +70,8 @@ export async function loadOrgSessionState(userId: string, preferredOrganizationI
     name: m.organization.name,
     slug: m.organization.slug,
     demoProfileKey: m.organization.demoProfileKey,
+    isDemoTenant: m.organization.isDemoTenant,
+    useSupabaseTenantData: m.organization.useSupabaseTenantData,
   }));
 
   if (memberships.length === 0) {
@@ -100,6 +107,9 @@ export async function loadOrgSessionState(userId: string, preferredOrganizationI
     secondaryColor: org.secondaryColor,
     accentColor: org.accentColor,
     demoProfileKey: org.demoProfileKey,
+    isDemoTenant: org.isDemoTenant,
+    demoEditingEnabled: org.demoEditingEnabled,
+    useSupabaseTenantData: org.useSupabaseTenantData,
     modules: modulesFromRows(org.modules),
     themeMode: settings?.themeMode ?? "light",
     defaultLandingPage: settings?.defaultLandingPage ?? "/overview",

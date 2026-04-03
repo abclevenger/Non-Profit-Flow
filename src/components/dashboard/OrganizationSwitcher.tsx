@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { useWorkspace } from "@/lib/workspace-context";
 
 export function OrganizationSwitcher() {
@@ -48,7 +48,7 @@ export function OrganizationSwitcher() {
       >
         {organizations.map((o) => (
           <option key={o.id} value={o.id}>
-            {o.name}
+            {o.isDemoTenant ? `${o.name} (demo)` : o.name}
           </option>
         ))}
       </select>

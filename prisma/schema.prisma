@@ -14,6 +14,10 @@ model User {
   emailVerified    DateTime?
   image            String?
   passwordHash     String?
+  /// Supabase Auth user id — used for Postgres RLS `auth.uid()` sync (`organization_members`).
+  supabaseAuthId   String? @unique
+  /// Cross-tenant platform operator (legal / ops). Checked server-side for admin APIs.
+  isPlatformAdmin  Boolean @default(false)
   /// Legacy default; effective dashboard permissions come from `OrganizationMembership` for the active org.
   role             String  @default("BOARD_MEMBER")
   twoFactorEnabled Boolean @default(false)
@@ -77,7 +81,7 @@ model ContentAccessLog {
   @@index([organizationId, createdAt])
 }
 
-/// Tenant. Demo/sample orgs set `demoModeEnabled` + `demoProfileKey` to load bundled mock dashboard JSON.
+/// Tenant. Demo orgs: `isDemoTenant` + seeded data; `useSupabaseTenantData` reads Postgres via service role / RLS.
 /// `billingPlan`: future — STARTER | GROWTH | ENTERPRISE
 model Organization {
   id               String   @id @default(cuid())
@@ -90,10 +94,19 @@ model Organization {
   accentColor      String?
   /// When set, `getDashboardProfile(demoProfileKey)` loads mock board data (communityNonprofit, etc.)
   demoProfileKey   String?
+  /// Legacy: when true without `useSupabaseTenantData`, UI uses bundled JSON profiles.
   demoModeEnabled  Boolean  @default(false)
+  /// Sales / showcase tenant — show Demo badge, apply read-only guardrails unless `demoEditingEnabled`.
+  isDemoTenant     Boolean  @default(false)
+  /// Allow edits to seeded demo content (org admin / owner; still server-enforced).
+  demoEditingEnabled Boolean @default(false)
+  /// When true and Supabase tenant tables are populated, dashboard loads live tenant snapshot instead of mock JSON.
+  useSupabaseTenantData Boolean @default(false)
   industryType     String?
   onboardingStatus String   @default("ACTIVE")
   billingPlan      String?
+  /// Optional free-text context for governance AI / standards tools (not shown publicly by default).
+  governanceProfileNotes String?
 
   settings         OrganizationSettings?
   modules          OrganizationModule[]
@@ -101,9 +114,100 @@ model Organization {
   gcReviews        GcReviewRequest[]
   expertReviews    ExpertReviewRequest[]
   routingRules     IssueRoutingRule[]
+  npAssessments    NpAssessment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Global template: nonprofit organizational assessment (Authenticity Consulting / United Way style).
+model NpAssessmentCategory {
+  id           String                 @id @default(cuid())
+  slug         String                 @unique
+  name         String
+  displayOrder Int
+  questions    NpAssessmentQuestion[]
+
+  createdAt DateTime @default(now())
+}
+
+model NpAssessmentQuestion {
+  id            String   @id @default(cuid())
+  categoryId    String
+  category      NpAssessmentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  indicatorCode String                 @unique
+  questionText  String
+  /// E | R | A
+  ratingType    String
+  displayOrder  Int
+  responses     NpAssessmentResponse[]
+
+  @@index([categoryId, displayOrder])
+}
+
+/// One assessment run per org (multiple respondents via participants).
+model NpAssessment {
+  id                   String   @id @default(cuid())
+  organizationId       String
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title                String   @default("Nonprofit organizational assessment")
+  /// DRAFT | IN_PROGRESS | SUBMITTED
+  status               String   @default("DRAFT")
+  allowAnonymous       Boolean  @default(false)
+  currentCategoryIndex Int      @default(0)
+  createdByUserId      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  participants NpAssessmentParticipant[]
+  responses    NpAssessmentResponse[]
+  reports      NpAssessmentReport[]
+
+  @@index([organizationId, updatedAt])
+}
+
+model NpAssessmentParticipant {
+  id            String   @id @default(cuid())
+  assessmentId  String
+  assessment    NpAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  label         String?
+  userId        String?
+  /// When set, client can resume without tying to a user (paired with allowAnonymous on assessment).
+  resumeToken   String?  @unique
+  isAnonymous   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  responses NpAssessmentResponse[]
+
+  @@index([assessmentId])
+}
+
+model NpAssessmentResponse {
+  id            String   @id @default(cuid())
+  assessmentId  String
+  assessment    NpAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  participantId String
+  participant   NpAssessmentParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  questionId    String
+  question      NpAssessmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  /// MET | NEEDS_WORK | NA | DONT_KNOW
+  answer        String
+  updatedAt     DateTime @updatedAt
+
+  @@unique([participantId, questionId])
+  @@index([assessmentId])
+}
+
+/// Optional cached report snapshot (aggregate or per participant).
+model NpAssessmentReport {
+  id            String   @id @default(cuid())
+  assessmentId  String
+  assessment    NpAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  participantId String?
+  payload       String
+  generatedAt   DateTime @default(now())
+
+  @@index([assessmentId])
 }
 
 /// Extended org config (theme, domain, landing). Branding colors live on `Organization` for simpler queries.

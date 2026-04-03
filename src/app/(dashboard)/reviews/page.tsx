@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { useEffect, useMemo, useState } from "react";
 import { ExpertReviewStatusPill } from "@/components/expert-review/ExpertReviewStatusPill";
 import { useExpertReviewData } from "@/components/expert-review/ExpertReviewProviders";

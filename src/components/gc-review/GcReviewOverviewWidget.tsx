@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useId } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { canFlagForGcReview } from "@/lib/gc-review/permissions";
 import { useGcReviewData } from "./GcReviewProviders";
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-/** Avoid loading NextAuth/Prisma at module init during `next build` page-data collection. */
+/** Dynamic route — avoid static analysis issues during `next build`. */
 export const dynamic = "force-dynamic";
 
 const LIST_LIMIT = 200;

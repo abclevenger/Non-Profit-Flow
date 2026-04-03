@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useId } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { canAccessReviewsQueue } from "@/lib/expert-review/permissions";
 import { useExpertReviewData } from "./ExpertReviewProviders";
 

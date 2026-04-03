@@ -2,12 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { canAccessVotingWorkspace } from "@/lib/auth/permissions";
 import { isMemberRole } from "@/lib/auth/roles";
-import type { Session } from "next-auth";
+import type { Session } from "@/lib/auth/app-session";
 import { canAccessReviewsQueue, canManageIssueRouting } from "@/lib/expert-review/permissions";
 import { canAccessGcReviewQueue } from "@/lib/gc-review/permissions";
 import { useOrganizationBranding } from "@/lib/organization-branding-context";
@@ -19,6 +19,9 @@ export type NavItem = { href: string; label: string };
 
 const defaultNav: NavItem[] = [
   { href: "/overview", label: "Overview" },
+  { href: "/assessment/report", label: "Assessment report" },
+  { href: "/assessment/standards", label: "Standards hub" },
+  { href: "/assessment/executive-report", label: "Executive report" },
   { href: "/strategy", label: "Strategy" },
   { href: "/governance", label: "Governance" },
   { href: "/risks", label: "Risks" },
@@ -80,7 +83,11 @@ export function DashboardSidebar({
       return effectiveModules[key] === true;
     });
     if (role === "ADMIN") {
-      items = [...items, { href: "/admin/audit", label: "Audit log" }];
+      items = [
+        ...items,
+        { href: "/admin/audit", label: "Audit log" },
+        { href: "/auth/debug", label: "Supabase session" },
+      ];
     }
     if (role && isMemberRole(role) && canAccessGcReviewQueue(role)) {
       items = [...items, { href: "/general-counsel", label: "GC review queue" }];
@@ -123,8 +130,14 @@ export function DashboardSidebar({
           />
         );
       }
-      return (
-        <Image src={logo.src} alt={logo.alt} width={160} height={80} className="max-h-20 w-auto object-contain" />
+        return (
+        <Image
+          src={logo.src}
+          alt={logo.alt}
+          width={160}
+          height={190}
+          className="max-h-32 w-auto max-w-[7.5rem] object-contain"
+        />
       );
     }
     return (
@@ -142,7 +155,9 @@ export function DashboardSidebar({
       <div className="border-b border-stone-200/50 bg-[color-mix(in_srgb,var(--surface-elevated,#fff)_72%,transparent)] px-5 py-8 text-center backdrop-blur-[2px] lg:px-6">
         <div className="mx-auto flex max-w-[14rem] flex-col items-center gap-5">
           <div
-            className="flex min-h-[5.5rem] w-full max-w-[5.5rem] items-center justify-center rounded-2xl border border-stone-200/80 bg-[var(--surface-elevated,#ffffff)] px-2 py-4 shadow-sm ring-1 ring-stone-100/80"
+            className={`flex w-full items-center justify-center rounded-2xl border border-stone-200/80 bg-[var(--surface-elevated,#ffffff)] shadow-sm ring-1 ring-stone-100/80 ${
+              hasLogoImage ? "min-h-[8rem] max-w-[9rem] px-3 py-4" : "min-h-[5.5rem] max-w-[5.5rem] px-2 py-4"
+            }`}
             aria-label={hasLogoImage ? "Organization logo" : "Organization name"}
           >
             {renderMark()}

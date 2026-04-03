@@ -36,6 +36,8 @@ const ORGANIZATION_DEFS = [
     demoProfileKey: "communityNonprofit",
     primaryColor: "#5a7d6a",
     industryType: "nonprofit",
+    /** When SEED_SUPABASE_TENANT=1 and service role is set, seed Postgres + flip this on. */
+    useSupabaseTenantData: process.env.SEED_SUPABASE_TENANT === "1",
   },
   {
     slug: "growing-impact",
@@ -44,6 +46,7 @@ const ORGANIZATION_DEFS = [
     demoProfileKey: "growingNonprofit",
     primaryColor: "#6b5344",
     industryType: "nonprofit",
+    useSupabaseTenantData: false,
   },
   {
     slug: "riverside-academy",
@@ -52,6 +55,25 @@ const ORGANIZATION_DEFS = [
     demoProfileKey: "privateSchool",
     primaryColor: "#4a5d8f",
     industryType: "school",
+    useSupabaseTenantData: false,
+  },
+  {
+    slug: "legal-aid-collaborative",
+    name: "Legal Aid Collaborative",
+    missionSnippet: "Expanding access to justice through clinics, pro bono partnerships, and community education.",
+    demoProfileKey: "communityNonprofit",
+    primaryColor: "#3d5a80",
+    industryType: "nonprofit",
+    useSupabaseTenantData: false,
+  },
+  {
+    slug: "youth-development-alliance",
+    name: "Youth Development Alliance",
+    missionSnippet: "Mentorship, after-school programs, and workforce pathways for teens and young adults.",
+    demoProfileKey: "growingNonprofit",
+    primaryColor: "#6b4f4f",
+    industryType: "nonprofit",
+    useSupabaseTenantData: false,
   },
 ] as const;
 
@@ -71,12 +93,14 @@ async function main() {
       name: "Board Admin",
       passwordHash: adminPass,
       role: "ADMIN",
+      isPlatformAdmin: true,
       twoFactorEnabled: true,
       twoFactorSecret: demoTotpSecret,
     },
     update: {
       passwordHash: adminPass,
       role: "ADMIN",
+      isPlatformAdmin: true,
       twoFactorEnabled: true,
       twoFactorSecret: demoTotpSecret,
     },
@@ -125,6 +149,9 @@ async function main() {
         missionSnippet: o.missionSnippet,
         demoProfileKey: o.demoProfileKey,
         demoModeEnabled: true,
+        isDemoTenant: true,
+        demoEditingEnabled: false,
+        useSupabaseTenantData: o.useSupabaseTenantData,
         primaryColor: o.primaryColor,
         secondaryColor: "#5c7a7a",
         accentColor: o.primaryColor,
@@ -137,6 +164,8 @@ async function main() {
         missionSnippet: o.missionSnippet,
         demoProfileKey: o.demoProfileKey,
         demoModeEnabled: true,
+        isDemoTenant: true,
+        useSupabaseTenantData: o.useSupabaseTenantData,
         primaryColor: o.primaryColor,
         industryType: o.industryType,
       },
@@ -186,7 +215,7 @@ async function main() {
     }
   }
 
-  const [community, growing, school] = orgRows;
+  const [community, growing, school, legalAid, youthAlliance] = orgRows;
 
   const membershipPairs: {
     userId: string;
@@ -196,8 +225,11 @@ async function main() {
     { userId: adminUser.id, organizationId: community.id, role: "OWNER" },
     { userId: adminUser.id, organizationId: growing.id, role: "OWNER" },
     { userId: adminUser.id, organizationId: school.id, role: "OWNER" },
+    { userId: adminUser.id, organizationId: legalAid.id, role: "OWNER" },
+    { userId: adminUser.id, organizationId: youthAlliance.id, role: "OWNER" },
     { userId: memberUser.id, organizationId: community.id, role: "BOARD_MEMBER" },
     { userId: memberUser.id, organizationId: growing.id, role: "BOARD_MEMBER" },
+    { userId: memberUser.id, organizationId: legalAid.id, role: "BOARD_MEMBER" },
     { userId: guestUser.id, organizationId: community.id, role: "VIEWER" },
   ];
 
@@ -211,8 +243,17 @@ async function main() {
     });
   }
 
+  if (process.env.SEED_SUPABASE_TENANT === "1" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const { seedSupabaseTenantForOrganization } = await import("./seed-supabase-tenant");
+      await seedSupabaseTenantForOrganization(community.id, true);
+    } catch (e) {
+      console.warn("Supabase tenant seed skipped or failed:", e);
+    }
+  }
+
   console.log("Seed complete (multi-tenant organizations).");
-  console.log("Admin:", adminEmail, "/ BoardAdmin1!z9 — member of all 3 demo orgs (OWNER)");
+  console.log("Admin:", adminEmail, "/ BoardAdmin1!z9 — platform admin; OWNER on all demo orgs");
   console.log("  2FA (TOTP) secret:", demoTotpSecret);
   console.log("Member:", memberEmail, "/ MemberPass1!z9 — community + growing (BOARD_MEMBER)");
   console.log("Guest:", guestEmail, "/ GuestView1!z9 — community only (VIEWER)");

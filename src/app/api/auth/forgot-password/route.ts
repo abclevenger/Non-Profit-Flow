@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
+import { getPublicAppUrl } from "@/lib/env/public-app-url";
 import { prisma } from "@/lib/prisma";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
       expires,
     },
   });
-  const baseUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const baseUrl = getPublicAppUrl();
   const resetLink = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
   const devHint =
     process.env.NODE_ENV === "development"

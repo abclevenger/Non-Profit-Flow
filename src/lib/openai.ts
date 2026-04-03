@@ -123,3 +123,110 @@ function normalizeUrgency(value: unknown): "high" | "medium" | "low" {
   if (u === "high" || u === "medium" || u === "low") return u;
   return "medium";
 }
+
+export type NpAssessmentAiSummaryResult = {
+  strongestCategories: string;
+  needsAttention: string;
+  essentialFirst: string;
+};
+
+/**
+ * Nonprofit organizational assessment — concise executive narrative from scored JSON only.
+ */
+export async function generateNpAssessmentSummary(payload: unknown): Promise<NpAssessmentAiSummaryResult> {
+  const openai = getOpenAIClient();
+
+  const completion = await openai.chat.completions.create({
+    model: MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content: `You are a nonprofit governance advisor. Given ONLY the JSON assessment summary (category counts, flagged essential items), write three short plain-language paragraphs for executives. No legal advice. Output valid JSON:
+{
+  "strongestCategories": "string, 2-4 sentences: which thematic areas look strongest and why (use Met counts).",
+  "needsAttention": "string, 2-4 sentences: which areas need attention (Needs Work, Don't Know, N/A volume).",
+  "essentialFirst": "string, 2-4 sentences: which Essential-rated flagged items to address first and why."
+}
+Be specific to the data. If a list is empty, say what is unknown and suggest completing the assessment.`,
+      },
+      {
+        role: "user",
+        content: JSON.stringify(payload),
+      },
+    ],
+  });
+
+  const text = completion.choices[0]?.message?.content;
+  if (!text) throw new Error("OpenAI returned an empty response");
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("OpenAI returned invalid JSON");
+  }
+
+  const o = parsed as Partial<NpAssessmentAiSummaryResult>;
+  return {
+    strongestCategories:
+      typeof o.strongestCategories === "string" ? o.strongestCategories : "Unable to summarize strengths.",
+    needsAttention: typeof o.needsAttention === "string" ? o.needsAttention : "Unable to summarize gaps.",
+    essentialFirst: typeof o.essentialFirst === "string" ? o.essentialFirst : "Unable to prioritize essentials.",
+  };
+}
+
+export type GovernanceAiMode = "explain" | "next" | "policy_draft";
+
+export type GovernanceAiInput = {
+  mode: GovernanceAiMode;
+  pillarLabel: string;
+  pillarSummary: string;
+  organizationName?: string;
+  missionSnippet?: string;
+  questionText?: string;
+  indicatorCode?: string;
+  responseLabel?: string;
+  ratingLabel?: string;
+};
+
+/**
+ * Turns weak assessment signals into governance actions — not legal advice; original drafting only.
+ */
+export async function generateGovernanceAssistantReply(input: GovernanceAiInput): Promise<{ text: string }> {
+  const openai = getOpenAIClient();
+
+  const modeHint =
+    input.mode === "explain"
+      ? "Explain in plain language why this gap matters for nonprofit governance and what 'good' typically looks like. 2 short paragraphs max."
+      : input.mode === "next"
+        ? "List 5–7 concrete next steps (who should act, what artifact to produce, rough sequence). Bullet list. Not legal advice."
+        : "Draft a concise policy OUTLINE (sections + bullet intent only) the organization could adapt with counsel — no statutory citations, no copying external text.";
+
+  const completion = await openai.chat.completions.create({
+    model: MODEL,
+    messages: [
+      {
+        role: "system",
+        content: `You assist nonprofit boards with governance operations. ${modeHint} Do not claim to quote the National Council of Nonprofits or any third party. Do not provide legal advice. If information is missing, state assumptions briefly.`,
+      },
+      {
+        role: "user",
+        content: JSON.stringify({
+          organizationName: input.organizationName,
+          missionSnippet: input.missionSnippet,
+          pillar: input.pillarLabel,
+          pillarContext: input.pillarSummary,
+          indicatorCode: input.indicatorCode,
+          practice: input.questionText,
+          selfAssessmentResponse: input.responseLabel,
+          priorityTier: input.ratingLabel,
+        }),
+      },
+    ],
+  });
+
+  const text = completion.choices[0]?.message?.content?.trim();
+  if (!text) throw new Error("OpenAI returned an empty response");
+  return { text };
+}

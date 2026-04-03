@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { useMemo } from "react";
 import { canAccessVotingWorkspace } from "@/lib/auth/permissions";
 import { isMemberRole } from "@/lib/auth/roles";

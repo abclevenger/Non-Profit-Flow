@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { ActionTrackerTable } from "@/components/dashboard/ActionTrackerTable";
 import { InsightCallout } from "@/components/dashboard/InsightCallout";
 import {

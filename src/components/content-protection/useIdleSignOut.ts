@@ -1,9 +1,20 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import { useEffect, useRef } from "react";
 
 const DEFAULT_MS = 45 * 60 * 1000;
+
+async function signOutSupabaseAndRedirect() {
+  try {
+    const { createBrowserSupabaseClient } = await import("@/lib/supabase/browser");
+    const sb = createBrowserSupabaseClient();
+    await sb.auth.signOut();
+  } catch {
+    /* ignore */
+  }
+  window.location.href = "/login";
+}
 
 /**
  * Signs out after idle timeout (demo-friendly session hygiene).
@@ -18,7 +29,7 @@ export function useIdleSignOut(idleMs: number = DEFAULT_MS) {
     const reset = () => {
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
-        void signOut({ callbackUrl: "/login" });
+        void signOutSupabaseAndRedirect();
       }, idleMs);
     };
 

@@ -7,10 +7,10 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/session-hooks";
 import type { SessionActiveOrganization } from "@/lib/auth/sessionOrganizations";
-import { getDashboardProfile } from "@/lib/mock-data/dashboardData";
-import type { OrganizationProfile, SampleProfileId } from "@/lib/mock-data/types";
+import type { SampleProfileId } from "@/lib/mock-data/types";
+import { useDashboardProfile } from "@/lib/workspace/useDashboardProfile";
 
 function coerceDemoProfileKey(raw: string | null | undefined): SampleProfileId {
   if (raw === "communityNonprofit" || raw === "growingNonprofit" || raw === "privateSchool") {
@@ -19,10 +19,9 @@ function coerceDemoProfileKey(raw: string | null | undefined): SampleProfileId {
   return "communityNonprofit";
 }
 
-type WorkspaceContextValue = {
+export type WorkspaceContextValue = {
   organizationId: string | null;
   organization: SessionActiveOrganization | null;
-  profile: OrganizationProfile;
   /** Sample bundle key for benchmarks / legacy props */
   demoProfileKey: SampleProfileId;
   organizations: import("@/lib/auth/sessionOrganizations").SessionOrganizationSummary[];
@@ -39,8 +38,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const active = session?.user?.activeOrganization ?? null;
   const demoProfileKey = useMemo(() => coerceDemoProfileKey(active?.demoProfileKey), [active?.demoProfileKey]);
-
-  const profile = useMemo(() => getDashboardProfile(demoProfileKey), [demoProfileKey]);
 
   const setActiveOrganization = useCallback(
     async (organizationId: string) => {
@@ -59,7 +56,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return {
       organizationId: active?.id ?? null,
       organization: active,
-      profile,
       demoProfileKey,
       organizations: orgs,
       setActiveOrganization,
@@ -67,7 +63,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       status,
       hasOrganization,
     };
-  }, [active, demoProfileKey, profile, session?.user?.organizations, setActiveOrganization, refreshSession, status]);
+  }, [active, demoProfileKey, session?.user?.organizations, setActiveOrganization, refreshSession, status]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
@@ -79,17 +75,20 @@ export function useWorkspace() {
 }
 
 /**
- * @deprecated Use `useWorkspace()` — kept for gradual migration; maps to workspace fields.
+ * @deprecated Prefer `useWorkspace()` + `useDashboardProfile()` — kept for gradual migration.
  */
 export function useDemoMode() {
   const w = useWorkspace();
+  const dash = useDashboardProfile();
   return {
-    profileId: w.demoProfileKey,
+    profileId: dash.profileId === "live" ? w.demoProfileKey : dash.profileId,
     setProfileId: (id: SampleProfileId) => {
       const match = w.organizations.find((o) => o.demoProfileKey === id);
       if (match) void w.setActiveOrganization(match.id);
     },
-    profile: w.profile,
+    profile: dash.profile,
+    profileLoading: dash.loading,
+    dataSource: dash.source,
     organizationId: w.organizationId,
     organization: w.organization,
   };

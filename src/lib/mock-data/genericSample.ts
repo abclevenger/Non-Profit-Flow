@@ -12,7 +12,7 @@ export const genericSample: OrganizationProfile = {
   organizationName: "Sample Community Alliance",
   missionSnippet:
     "We strengthen neighborhoods through programs, partnerships, and advocacy so every family can thrive.",
-  logo: { type: "placeholder", alt: "Organization logo" },
+  logo: { type: "url", src: "/govflow-logo.png", alt: "Non-Profit Flow" },
   reportingPeriod: "Q1 2026 (through March 31)",
   boardChair: "Jordan Ellis",
   executiveDirector: "Sam Rivera",

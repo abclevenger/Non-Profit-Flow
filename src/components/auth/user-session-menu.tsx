@@ -1,10 +1,12 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { ROLE_LABELS } from "@/lib/auth/roles";
+import { useAppSession } from "./app-auth-provider";
 
 export function UserSessionMenu() {
-  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { data: session, status } = useAppSession();
 
   if (status === "loading") {
     return <span className="text-xs text-stone-500">Session…</span>;
@@ -26,7 +28,17 @@ export function UserSessionMenu() {
       </div>
       <button
         type="button"
-        onClick={() => signOut({ callbackUrl: "/login" })}
+        onClick={async () => {
+          try {
+            const { createBrowserSupabaseClient } = await import("@/lib/supabase/browser");
+            const sb = createBrowserSupabaseClient();
+            await sb.auth.signOut();
+          } catch {
+            /* misconfigured client */
+          }
+          router.push("/login");
+          router.refresh();
+        }}
         className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-50"
       >
         Sign out
