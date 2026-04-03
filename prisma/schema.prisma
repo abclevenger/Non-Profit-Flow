@@ -18,6 +18,8 @@ model User {
   supabaseAuthId   String? @unique
   /// Cross-tenant platform operator (legal / ops). Checked server-side for admin APIs.
   isPlatformAdmin  Boolean @default(false)
+  /// When false, server should refuse new memberships on `Organization.isDemoTenant` unless platform admin assigns.
+  allowDemoOrganizationAssignment Boolean @default(false)
   /// Legacy default; effective dashboard permissions come from `OrganizationMembership` for the active org.
   role             String  @default("BOARD_MEMBER")
   twoFactorEnabled Boolean @default(false)
@@ -219,6 +221,8 @@ model OrganizationSettings {
   faviconUrl         String?
   customDomain       String?
   defaultLandingPage String   @default("/overview")
+  /// JSON string (SQLite): board structure, committees, prefs — see `lib/organization-settings/extended-settings.ts`.
+  extendedSettings   String?
   updatedAt          DateTime @updatedAt
 }
 

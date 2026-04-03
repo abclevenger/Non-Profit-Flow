@@ -82,6 +82,9 @@ export function DashboardSidebar({
       if (!key) return true;
       return effectiveModules[key] === true;
     });
+    if (session?.user?.isPlatformAdmin) {
+      items = [...items, { href: "/platform-admin", label: "Platform admin" }];
+    }
     if (role === "ADMIN") {
       items = [
         ...items,
@@ -181,13 +184,19 @@ export function DashboardSidebar({
           </div>
         </div>
         {showOrgSettings ? (
-          <div className="mt-3 shrink-0 border-t border-stone-200/80 pt-3 lg:mt-auto">
+          <div className="mt-3 flex shrink-0 flex-col gap-1 border-t border-stone-200/80 pt-3 lg:mt-auto">
             <Link
               href="/settings"
               className={`${linkClass("/settings", true)} flex items-center justify-center gap-2 lg:justify-start`}
             >
               <GearIcon className="shrink-0 opacity-80" />
               Settings
+            </Link>
+            <Link href="/settings/workspace" className={linkClass("/settings/workspace", true)}>
+              Workspace ops
+            </Link>
+            <Link href="/settings/members" className={linkClass("/settings/members", true)}>
+              Members
             </Link>
           </div>
         ) : null}

@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
+import { defaultExtendedSettings } from "../src/lib/organization-settings/extended-settings";
 
 /** Must match `OrganizationMembership.role` values in schema / `membershipRole.ts`. */
 type SeedOrgRole = "OWNER" | "ADMIN" | "BOARD_CHAIR" | "BOARD_MEMBER" | "STAFF" | "VIEWER";
@@ -27,6 +28,8 @@ const ROUTING_DEFAULTS = [
   { category: "OTHER", displayName: "Other", destinationEmail: "support@board.demo" },
 ] as const;
 
+const seedSupabaseTenants = process.env.SEED_SUPABASE_TENANT === "1";
+
 const ORGANIZATION_DEFS = [
   {
     slug: "community-outreach",
@@ -36,8 +39,8 @@ const ORGANIZATION_DEFS = [
     demoProfileKey: "communityNonprofit",
     primaryColor: "#5a7d6a",
     industryType: "nonprofit",
-    /** When SEED_SUPABASE_TENANT=1 and service role is set, seed Postgres + flip this on. */
-    useSupabaseTenantData: process.env.SEED_SUPABASE_TENANT === "1",
+    /** When SEED_SUPABASE_TENANT=1 and service role is set, seed Postgres + load dashboard from tenant snapshot. */
+    useSupabaseTenantData: seedSupabaseTenants,
   },
   {
     slug: "growing-impact",
@@ -46,7 +49,7 @@ const ORGANIZATION_DEFS = [
     demoProfileKey: "growingNonprofit",
     primaryColor: "#6b5344",
     industryType: "nonprofit",
-    useSupabaseTenantData: false,
+    useSupabaseTenantData: seedSupabaseTenants,
   },
   {
     slug: "riverside-academy",
@@ -55,7 +58,7 @@ const ORGANIZATION_DEFS = [
     demoProfileKey: "privateSchool",
     primaryColor: "#4a5d8f",
     industryType: "school",
-    useSupabaseTenantData: false,
+    useSupabaseTenantData: seedSupabaseTenants,
   },
   {
     slug: "legal-aid-collaborative",
@@ -64,7 +67,7 @@ const ORGANIZATION_DEFS = [
     demoProfileKey: "communityNonprofit",
     primaryColor: "#3d5a80",
     industryType: "nonprofit",
-    useSupabaseTenantData: false,
+    useSupabaseTenantData: seedSupabaseTenants,
   },
   {
     slug: "youth-development-alliance",
@@ -73,7 +76,7 @@ const ORGANIZATION_DEFS = [
     demoProfileKey: "growingNonprofit",
     primaryColor: "#6b4f4f",
     industryType: "nonprofit",
-    useSupabaseTenantData: false,
+    useSupabaseTenantData: seedSupabaseTenants,
   },
 ] as const;
 
@@ -172,12 +175,14 @@ async function main() {
     });
     orgRows.push({ id: org.id, slug: org.slug });
 
+    const ext = JSON.stringify(defaultExtendedSettings());
     await prisma.organizationSettings.upsert({
       where: { organizationId: org.id },
       create: {
         organizationId: org.id,
         themeMode: "light",
         defaultLandingPage: "/overview",
+        extendedSettings: ext,
       },
       update: {},
     });
@@ -243,10 +248,14 @@ async function main() {
     });
   }
 
-  if (process.env.SEED_SUPABASE_TENANT === "1" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (seedSupabaseTenants && process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
-      const { seedSupabaseTenantForOrganization } = await import("./seed-supabase-tenant");
-      await seedSupabaseTenantForOrganization(community.id, true);
+      const { seedSupabaseTenantForDemoOrg } = await import("./seed-supabase-tenant");
+      for (const row of orgRows) {
+        const def = ORGANIZATION_DEFS.find((d) => d.slug === row.slug);
+        const key = def?.demoProfileKey ?? "communityNonprofit";
+        await seedSupabaseTenantForDemoOrg(row.id, key, true);
+      }
     } catch (e) {
       console.warn("Supabase tenant seed skipped or failed:", e);
     }

@@ -34,14 +34,29 @@
 
 ## Next steps (incremental)
 
-1. Apply the SQL migration in the Supabase project (SQL editor or CLI).
-2. Run `npx prisma db push` (or migrate) locally so new Prisma columns exist.
-3. For a live customer org: set `isDemoTenant = false`, `useSupabaseTenantData = true`, seed or import rows, run sync membership after user login.
-4. Replace remaining module pages that still assume static JSON with queries (or reuse `tenant-snapshot` fields).
-5. Add admin UI: create org, invite user, assign role, toggle `demoEditingEnabled`, reset demo seed (re-run `seedSupabaseTenantForOrganization`).
-6. Move Prisma to hosted Postgres if SQLite limits production (optional).
+1. Apply SQL migrations in Supabase in order: `20260402120000_tenant_core.sql`, then `20260403130000_platform_admin_rls.sql` (adds `is_platform_admin()` and broadens SELECT / `can_write_tenant_org` for operators in `platform_admins`).
+2. Run `npx prisma generate` and `npx prisma db push` (or `migrate`) so Prisma matches schema — resolve any local DB drift first.
+3. For a **live** customer org: set `isDemoTenant = false`, `useSupabaseTenantData = true`, seed or import Supabase rows, run `POST /api/auth/sync-supabase-membership` after login.
+4. **Seeded demo orgs (all five):** set `SEED_SUPABASE_TENANT=1` and `SUPABASE_SERVICE_ROLE_KEY` when running `npx prisma db seed` — each demo org gets tenant rows from its `demoProfileKey` profile (`seedSupabaseTenantForDemoOrg` in `src/lib/tenant/seedSupabaseTenantData.ts`).
+5. **Platform admin:** `/platform-admin` — reset any `isDemoTenant` org to its template via `POST /api/platform-admin/demo-tenants/[organizationId]/reset` (server checks `User.isPlatformAdmin`). Insert matching `auth.users.id` into `public.platform_admins` if operators should bypass RLS from the Supabase client.
+6. **Org settings (Prisma):** `OrganizationSettings.extendedSettings` (JSON string on SQLite) holds operational prefs — UI at `/settings/workspace`; API `GET/PATCH /api/organizations/[organizationId]/workspace-settings`.
+7. **Members (read-only list):** `/settings/members` for org admins; API `GET /api/organizations/[organizationId]/members`.
+8. **Demo membership guard:** use `assertUserMayJoinDemoOrganization` before assigning memberships to demo tenants unless `User.allowDemoOrganizationAssignment` or platform admin (see `src/lib/organizations/demoMembershipPolicy.ts`).
+9. Replace remaining module pages that still assume static JSON with tenant queries where `useSupabaseTenantData` is on.
+10. Move Prisma to hosted Postgres for production if SQLite limits you; keep `extendedSettings` as a text/JSON column.
 
 ## Demo reset strategy
 
-- Re-run `seedSupabaseTenantForOrganization(orgId, true)` after truncating child tables (the seed file already deletes per-table before insert for that org).
+- **App:** Platform admin calls `POST /api/platform-admin/demo-tenants/[id]/reset` (uses `seedSupabaseTenantForDemoOrg`, preserves Prisma `demoEditingEnabled` on `tenant_organizations`).
+- **CLI:** Re-run `npx prisma db seed` with `SEED_SUPABASE_TENANT=1` to rehydrate all demo tenants.
 - Keep `demo_seed_version` on `tenant_organizations` for future migrations of seed shape.
+
+## Mock data audit (where UI is still driven by bundles)
+
+| Source | When used |
+|--------|-----------|
+| `useDashboardProfile` | `useSupabaseTenantData === false` → `getDashboardProfile(demoProfileKey)` |
+| `lib/mock-data/profiles/*` | Templates for Prisma seed + Supabase tenant seed |
+| Module pages under `(dashboard)/*` | Consume `useDashboardProfile().profile` — switch org to a Supabase-backed demo org to exercise live queries |
+
+**Goal:** set `useSupabaseTenantData` for production orgs and demos that should feel “real”; keep mock fallback for orgs not yet migrated.

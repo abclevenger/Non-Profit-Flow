@@ -15,7 +15,7 @@ export function UserSessionMenu() {
     return null;
   }
 
-  const { email, name, role } = session.user;
+  const { email, name, role, membershipRole, isPlatformAdmin } = session.user;
 
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-stone-200/80 bg-stone-50/80 px-3 py-2 text-sm">
@@ -24,6 +24,16 @@ export function UserSessionMenu() {
         <p className="truncate text-xs text-stone-600">{email}</p>
         <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-stone-500">
           {ROLE_LABELS[role]}
+          {membershipRole ? (
+            <span className="ml-1 font-normal normal-case text-stone-400">
+              · org role {membershipRole.replace(/_/g, " ").toLowerCase()}
+            </span>
+          ) : null}
+          {isPlatformAdmin ? (
+            <span className="ml-1 rounded bg-violet-100 px-1 py-0.5 font-semibold normal-case text-violet-900">
+              platform
+            </span>
+          ) : null}
         </p>
       </div>
       <button
