@@ -17,7 +17,7 @@ export function DashboardHeader({
   orgName,
   reportingPeriod,
   isDemoTenant = true,
-  ctaHref = "https://www.missionimpactlegal.com/contact",
+  ctaHref = "https://www.mission-impact.legal/contact",
 }: DashboardHeaderProps) {
   return (
     <header className="border-b border-stone-200/90 bg-white/90 backdrop-blur">

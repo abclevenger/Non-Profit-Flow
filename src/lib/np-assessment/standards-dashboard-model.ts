@@ -158,7 +158,7 @@ export function buildExecutiveReportModel(
     `Overall governance health index: ${governanceHealthScore}/100 (derived from self-assessment responses).`,
     `${report.overall.percentMet}% of answered items marked Met; ${report.overall.flagged} items flagged for follow-up (including N/A reviews).`,
     report.categoriesNeedingConsult > 1
-      ? `Multiple practice areas need attention — an organization-wide governance review is recommended.`
+      ? `Multiple practice areas need attention — prioritize cross-functional governance follow-up.`
       : report.categoriesNeedingConsult === 1
         ? `One primary practice area requires board or leadership attention.`
         : `No open flags in the assessed areas — maintain cadence and documentation.`,

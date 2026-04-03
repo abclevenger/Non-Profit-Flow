@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-const DEFAULT_HREF = "https://www.missionimpactlegal.com/contact";
+const DEFAULT_HREF = "https://www.mission-impact.legal/contact";
 
 export function NpAssessmentConsultCta({
   variant = "sidebar",

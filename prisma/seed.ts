@@ -261,6 +261,13 @@ async function main() {
     }
   }
 
+  try {
+    const { seedNpAssessmentCatalog } = await import("./seed-np-assessment-catalog");
+    await seedNpAssessmentCatalog(prisma);
+  } catch (e) {
+    console.warn("NP assessment catalog seed skipped or failed:", e);
+  }
+
   console.log("Seed complete (multi-tenant organizations).");
   console.log("Admin:", adminEmail, "/ BoardAdmin1!z9 — platform admin; OWNER on all demo orgs");
   console.log("  2FA (TOTP) secret:", demoTotpSecret);

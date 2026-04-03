@@ -313,18 +313,6 @@ function ConsultBanners({ report }: { report: NpAssessmentReportModel }) {
       </div>
     );
   }
-  if (b === "organization_wide") {
-    return (
-      <div
-        className="rounded-xl border border-violet-300/90 px-4 py-3 text-sm font-medium text-violet-950 shadow-sm print:hidden"
-        style={{ background: "color-mix(in srgb, rgb(221 214 254) 45%, white)" }}
-        role="status"
-      >
-        <strong>Organization-wide review recommended</strong> — multiple practice areas are flagged. Consider a cross-functional
-        governance retreat and advisor-supported prioritization.
-      </div>
-    );
-  }
   if (b === "priority") {
     return (
       <div

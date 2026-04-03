@@ -33,7 +33,7 @@ export type PriorityRow = {
   sortTier: number;
 };
 
-export type ConsultBannerLevel = "none" | "consult" | "priority" | "organization_wide" | "urgent_category";
+export type ConsultBannerLevel = "none" | "consult" | "priority" | "urgent_category";
 
 export type NpAssessmentReportModel = {
   categoryBlocks: CategoryScoreBlock[];
@@ -174,11 +174,11 @@ export function computeNpAssessmentReport(
     if (n >= 2) urgentCategorySlugs.push(slug);
   }
 
+  /** Severity: urgent category (2+ flagged Essential in one section) > any Essential not Met > any other not Met. */
   let consultBanner: ConsultBannerLevel = "none";
-  if (totalFlagged > 0) consultBanner = "consult";
-  if (rawPriorities.some((r) => r.rating === "E")) consultBanner = "priority";
-  if (categoriesNeedingConsult >= 2 && totalFlagged > 0) consultBanner = "organization_wide";
   if (urgentCategorySlugs.length > 0) consultBanner = "urgent_category";
+  else if (essentialFlaggedCount > 0) consultBanner = "priority";
+  else if (totalFlagged > 0) consultBanner = "consult";
 
   const denom = totalAnswered;
   const percentMet = denom === 0 ? 0 : Math.round((totalMet / denom) * 100);

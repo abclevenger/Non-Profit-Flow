@@ -19,6 +19,7 @@ export type NavItem = { href: string; label: string };
 
 const defaultNav: NavItem[] = [
   { href: "/overview", label: "Overview" },
+  { href: "/assessment", label: "Assessment" },
   { href: "/assessment/report", label: "Assessment report" },
   { href: "/assessment/standards", label: "Standards hub" },
   { href: "/assessment/executive-report", label: "Executive report" },

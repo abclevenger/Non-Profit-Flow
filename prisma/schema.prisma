@@ -153,11 +153,12 @@ model NpAssessment {
   organizationId       String
   organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   title                String   @default("Nonprofit organizational assessment")
-  /// DRAFT | IN_PROGRESS | SUBMITTED
-  status               String   @default("DRAFT")
+  /// NOT_STARTED | IN_PROGRESS | COMPLETED | ARCHIVED (legacy: DRAFT→NOT_STARTED, SUBMITTED→COMPLETED)
+  status               String   @default("NOT_STARTED")
   allowAnonymous       Boolean  @default(false)
   currentCategoryIndex Int      @default(0)
   createdByUserId      String?
+  submittedAt          DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -166,6 +167,7 @@ model NpAssessment {
   reports      NpAssessmentReport[]
 
   @@index([organizationId, updatedAt])
+  @@index([organizationId, status])
 }
 
 model NpAssessmentParticipant {
@@ -182,6 +184,7 @@ model NpAssessmentParticipant {
   responses NpAssessmentResponse[]
 
   @@index([assessmentId])
+  @@unique([assessmentId, userId])
 }
 
 model NpAssessmentResponse {
@@ -194,6 +197,11 @@ model NpAssessmentResponse {
   question      NpAssessmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
   /// MET | NEEDS_WORK | NA | DONT_KNOW
   answer        String
+  notes         String?
+  /// Derived: true when answer !== MET (consult path).
+  flaggedForConsult Boolean @default(false)
+  completedByUserId String?
+  createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@unique([participantId, questionId])
