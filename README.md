@@ -1,6 +1,6 @@
 # Non-Profit Flow
 
-A **standalone demo web app** for **Mission Impact Legal Advisors** Ã¢â‚¬â€ a calm, board-facing **strategic oversight** prototype for nonprofit leaders. It uses **local mock data only** (local mock data for the dashboard; **authentication** protects the app (see Authentication below)).
+A **standalone web app** for **Non-Profit Flow** — a calm, board-facing **strategic oversight** workspace for nonprofit leaders. **Authentication** protects the app (see Authentication below).
 
 ## What this is
 
@@ -131,7 +131,7 @@ Look for short comments in:
 
 ## Product name
 
-The shell shows **Governance** as the product line; Mission Impact Legal Advisors can be referenced in metadata and README as the firm presenting the demo.
+The product name is **Non-Profit Flow**; metadata and UI copy use this branding.
 
 ---
 

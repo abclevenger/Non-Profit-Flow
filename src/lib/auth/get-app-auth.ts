@@ -1,3 +1,4 @@
+import type { User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { tryCreateServerSupabaseClient } from "@/lib/supabase/server";
@@ -20,11 +21,16 @@ export async function getAppAuth(): Promise<AppSession | null> {
   const supabase = tryCreateServerSupabaseClient(cookieStore);
   if (!supabase) return null;
 
-  const {
-    data: { user: su },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !su?.email) return null;
+  let su: User | null = null;
+  let authError: Awaited<ReturnType<typeof supabase.auth.getUser>>["error"] = null;
+  try {
+    const res = await supabase.auth.getUser();
+    authError = res.error;
+    su = res.data?.user ?? null;
+  } catch {
+    return null;
+  }
+  if (authError || !su?.email) return null;
 
   const email = su.email.toLowerCase();
   let dbUser = await prisma.user.findUnique({ where: { email } });
@@ -65,6 +71,7 @@ export async function getAppAuth(): Promise<AppSession | null> {
       organizations: orgState.organizations,
       activeOrganizationId: orgState.activeOrganizationId,
       activeOrganization: orgState.activeOrganization,
+      activeMembership: orgState.activeMembership,
       membershipRole: orgState.membershipRole,
       canManageOrganizationSettings: orgState.canManageOrganizationSettings,
       canManageIssueRouting: orgState.canManageIssueRouting,

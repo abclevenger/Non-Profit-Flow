@@ -1,6 +1,7 @@
 import type { OrganizationMembershipRole } from "@/lib/organizations/membershipRole";
 import type { MemberRole } from "@/lib/auth/roles";
 import type {
+  SessionActiveMembership,
   SessionActiveOrganization,
   SessionOrganizationSummary,
 } from "@/lib/auth/sessionOrganizations";
@@ -13,6 +14,8 @@ export type AppSession = {
     organizations: SessionOrganizationSummary[];
     activeOrganizationId: string | null;
     activeOrganization: SessionActiveOrganization | null;
+    /** Active org’s `OrganizationMembership` (role = permission; title = display position). */
+    activeMembership: SessionActiveMembership | null;
     membershipRole: OrganizationMembershipRole | null;
     canManageOrganizationSettings: boolean;
     canManageIssueRouting: boolean;

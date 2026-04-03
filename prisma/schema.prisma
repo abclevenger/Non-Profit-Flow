@@ -29,9 +29,23 @@ model User {
   sessions            Session[]
   contentAccessLogs   ContentAccessLog[]
   organizationMemberships OrganizationMembership[]
+  profile               UserProfile?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Global personal info and preferences (1:1 with app `User`). Not org-specific — use `OrganizationMembership.title` for board/staff titles per tenant.
+model UserProfile {
+  userId              String  @id
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle            String?
+  phone               String?
+  timezone            String?
+  /// JSON string (SQLite): notification prefs, meeting defaults — extend without migrations when possible.
+  preferencesJson     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model Account {
@@ -107,6 +121,10 @@ model Organization {
   industryType     String?
   onboardingStatus String   @default("ACTIVE")
   billingPlan      String?
+  /// Stripe Customer id (cus_…), set after first successful Checkout / Portal sync.
+  stripeCustomerId     String?
+  /// Active subscription id (sub_…); cleared when subscription ends.
+  stripeSubscriptionId String?
   /// Optional free-text context for governance AI / standards tools (not shown publicly by default).
   governanceProfileNotes String?
 
@@ -156,6 +174,8 @@ model NpAssessment {
   /// NOT_STARTED | IN_PROGRESS | COMPLETED | ARCHIVED (legacy: DRAFT→NOT_STARTED, SUBMITTED→COMPLETED)
   status               String   @default("NOT_STARTED")
   allowAnonymous       Boolean  @default(false)
+  /// When false, board members may not save responses (chairs/admins/staff still can).
+  allowBoardMemberFill Boolean  @default(true)
   currentCategoryIndex Int      @default(0)
   createdByUserId      String?
   submittedAt          DateTime?
@@ -250,10 +270,15 @@ model OrganizationMembership {
   organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   userId         String
   user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// OWNER | ADMIN | BOARD_CHAIR | BOARD_MEMBER | STAFF | VIEWER (SQLite: store as string)
+  /// System permission in this org (OWNER | ADMIN | BOARD_CHAIR | …). Use `membershipRoleDisplayLabel` for UI.
   role String @default("VIEWER")
+  /// Real-world position in this org only (e.g. Board Chair, Treasurer). Not used for authorization.
+  title  String?
+  /// ACTIVE | INACTIVE — inactive members must not access org APIs or Supabase tenant RLS.
+  status String @default("ACTIVE")
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([organizationId, userId])
 }

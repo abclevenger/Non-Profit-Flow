@@ -1,22 +1,30 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { getLatestStoredReport } from "./assessment-runtime";
 import { loadNpAssessmentCatalogFromDb } from "./load-catalog";
 import { buildExecutiveReportModel, computeStandardsPillarCards } from "./standards-dashboard-model";
+import { recomputeReportBundleFromDatabase } from "./assessment-runtime";
+import type { NpAssessmentReportModel } from "./scoring";
+import type { AiSummaryPayload } from "./scoring";
+import type { NpAnswerValue } from "./answers";
+
+export type CompletedReportBundle = {
+  kind: "live";
+  assessmentId: string;
+  report: NpAssessmentReportModel;
+  aiPayload: AiSummaryPayload;
+  responses: Record<string, NpAnswerValue>;
+  executive: ReturnType<typeof buildExecutiveReportModel>;
+  /** Live orgs always recompute from DB; demo may use same path for consistency. */
+  dataSource: "database_responses";
+};
 
 export async function loadCompletedReportBundle(
   organizationId: string,
   assessmentId: string | undefined,
 ): Promise<
   | { kind: "none"; categories: Awaited<ReturnType<typeof loadNpAssessmentCatalogFromDb>> }
-  | {
-      kind: "live";
-      assessmentId: string;
-      report: NonNullable<Awaited<ReturnType<typeof getLatestStoredReport>>>["report"];
-      aiPayload: NonNullable<Awaited<ReturnType<typeof getLatestStoredReport>>>["aiPayload"];
-      executive: ReturnType<typeof buildExecutiveReportModel>;
-    }
+  | CompletedReportBundle
 > {
   const categories = await loadNpAssessmentCatalogFromDb();
   let targetId = assessmentId;
@@ -41,19 +49,21 @@ export async function loadCompletedReportBundle(
     return { kind: "none", categories };
   }
 
-  const stored = await getLatestStoredReport(targetId);
-  if (!stored) {
+  const recomputed = await recomputeReportBundleFromDatabase(targetId);
+  if (!recomputed) {
     return { kind: "none", categories };
   }
 
-  const pillarCards = computeStandardsPillarCards(categories, stored.responses);
-  const executive = buildExecutiveReportModel(stored.report, pillarCards);
+  const pillarCards = computeStandardsPillarCards(categories, recomputed.responses);
+  const executive = buildExecutiveReportModel(recomputed.report, pillarCards);
 
   return {
     kind: "live",
     assessmentId: targetId,
-    report: stored.report,
-    aiPayload: stored.aiPayload,
+    report: recomputed.report,
+    aiPayload: recomputed.aiPayload,
+    responses: recomputed.responses,
     executive,
+    dataSource: "database_responses",
   };
 }

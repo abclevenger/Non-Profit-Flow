@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { assertOrgAccess } from "@/lib/organizations/orgAccess";
 import { coerceOrgMembershipRole } from "@/lib/organizations/membershipRole";
 import { canPerformNpAssessmentAction } from "@/lib/np-assessment/np-assessment-permissions";
-import { ensureParticipant, responsesRecordForParticipant } from "@/lib/np-assessment/assessment-runtime";
+import { responsesMergedForAssessment } from "@/lib/np-assessment/assessment-runtime";
 import { loadNpAssessmentCatalogFromDb } from "@/lib/np-assessment/load-catalog";
 import { NP_ANSWER_LABEL } from "@/lib/np-assessment/answers";
 import { prisma } from "@/lib/prisma";
@@ -39,14 +39,20 @@ export async function GET(_req: Request, ctx: Ctx) {
   }
 
   const categories = await loadNpAssessmentCatalogFromDb();
-  const participant = await ensureParticipant(assessmentId, session!.user!.id);
-  const responses = await responsesRecordForParticipant(participant.id, categories);
+
+  const responses = await responsesMergedForAssessment(assessmentId, categories);
 
   const noteRows = await prisma.npAssessmentResponse.findMany({
-    where: { participantId: participant.id },
+    where: { assessmentId },
+    orderBy: { updatedAt: "desc" },
     include: { question: { select: { indicatorCode: true } } },
   });
-  const notesByCode = new Map(noteRows.map((r) => [r.question.indicatorCode, r.notes ?? ""]));
+  const notesByCode = new Map<string, string>();
+  for (const r of noteRows) {
+    const code = r.question.indicatorCode;
+    if (notesByCode.has(code)) continue;
+    notesByCode.set(code, r.notes?.trim() ?? "");
+  }
 
   const lines: string[] = [
     ["category", "indicator_code", "question", "rating_type", "response", "flagged_for_consult", "notes"].join(","),

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { assertOrgAccess } from "@/lib/organizations/orgAccess";
 import { coerceOrgMembershipRole } from "@/lib/organizations/membershipRole";
-import { canPerformNpAssessmentAction } from "@/lib/np-assessment/np-assessment-permissions";
+import { canFillNpAssessmentWizard } from "@/lib/np-assessment/np-assessment-permissions";
 import { ensureParticipant, saveAssessmentResponses } from "@/lib/np-assessment/assessment-runtime";
 import { prisma } from "@/lib/prisma";
 
@@ -29,15 +29,17 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
   const role = coerceOrgMembershipRole(session?.user?.membershipRole ?? "VIEWER");
-  if (!canPerformNpAssessmentAction(role, Boolean(session?.user?.isPlatformAdmin), "fill")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const isPlatform = Boolean(session?.user?.isPlatformAdmin);
 
   const assessment = await prisma.npAssessment.findFirst({
     where: { id: assessmentId, organizationId },
   });
   if (!assessment) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (!canFillNpAssessmentWizard(role, isPlatform, assessment.allowBoardMemberFill)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   let json: unknown;

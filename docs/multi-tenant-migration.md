@@ -1,5 +1,7 @@
 # Multi-tenant production migration
 
+For the full SaaS roadmap (phases 1–5, overview mapping, assessment tables), see [`saas-transformation-master-plan.md`](./saas-transformation-master-plan.md).
+
 ## Current architecture (after this refactor)
 
 | Layer | Responsibility |

@@ -12,6 +12,10 @@ import {
   membershipRoleToMemberRole,
   type OrganizationMembershipRole,
 } from "@/lib/organizations/membershipRole";
+import {
+  coerceMembershipStatus,
+  type OrganizationMembershipStatus,
+} from "@/lib/organizations/membership-status";
 
 export type SessionOrganizationSummary = {
   id: string;
@@ -20,6 +24,10 @@ export type SessionOrganizationSummary = {
   demoProfileKey: string | null;
   isDemoTenant: boolean;
   useSupabaseTenantData: boolean;
+  /** This user’s membership in this organization (for switcher + context). */
+  membershipRole: OrganizationMembershipRole;
+  membershipTitle: string | null;
+  membershipStatus: OrganizationMembershipStatus;
 };
 
 export type SessionActiveOrganization = {
@@ -40,6 +48,12 @@ export type SessionActiveOrganization = {
   defaultLandingPage: string;
 };
 
+export type SessionActiveMembership = {
+  role: OrganizationMembershipRole;
+  title: string | null;
+  status: OrganizationMembershipStatus;
+};
+
 function modulesFromRows(rows: { moduleName: string; isEnabled: boolean }[]): DashboardModulesState {
   const base = defaultModulesAllEnabled();
   for (const r of rows) {
@@ -53,7 +67,10 @@ function modulesFromRows(rows: { moduleName: string; isEnabled: boolean }[]): Da
 
 export async function loadOrgSessionState(userId: string, preferredOrganizationId: string | null | undefined) {
   const memberships = await prisma.organizationMembership.findMany({
-    where: { userId },
+    where: {
+      userId,
+      status: "ACTIVE",
+    },
     include: {
       organization: {
         include: {
@@ -72,6 +89,9 @@ export async function loadOrgSessionState(userId: string, preferredOrganizationI
     demoProfileKey: m.organization.demoProfileKey,
     isDemoTenant: m.organization.isDemoTenant,
     useSupabaseTenantData: m.organization.useSupabaseTenantData,
+    membershipRole: coerceOrgMembershipRole(m.role),
+    membershipTitle: m.title?.trim() || null,
+    membershipStatus: coerceMembershipStatus(m.status),
   }));
 
   if (memberships.length === 0) {
@@ -79,6 +99,7 @@ export async function loadOrgSessionState(userId: string, preferredOrganizationI
       organizations: [] as SessionOrganizationSummary[],
       activeOrganizationId: null as string | null,
       activeOrganization: null as SessionActiveOrganization | null,
+      activeMembership: null as SessionActiveMembership | null,
       membershipRole: null as OrganizationMembershipRole | null,
       effectiveMemberRole: membershipRoleToMemberRole("VIEWER"),
       canManageOrganizationSettings: false,
@@ -115,10 +136,17 @@ export async function loadOrgSessionState(userId: string, preferredOrganizationI
     defaultLandingPage: settings?.defaultLandingPage ?? "/overview",
   };
 
+  const activeMembership: SessionActiveMembership = {
+    role,
+    title: activeM.title?.trim() || null,
+    status: coerceMembershipStatus(activeM.status),
+  };
+
   return {
     organizations,
     activeOrganizationId: preferred,
     activeOrganization,
+    activeMembership,
     membershipRole: role,
     effectiveMemberRole: membershipRoleToMemberRole(role),
     canManageOrganizationSettings: canManageOrgSettings(role),

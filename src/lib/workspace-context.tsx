@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useSession } from "@/lib/auth/session-hooks";
-import type { SessionActiveOrganization } from "@/lib/auth/sessionOrganizations";
+import type { SessionActiveMembership, SessionActiveOrganization } from "@/lib/auth/sessionOrganizations";
 import type { SampleProfileId } from "@/lib/mock-data/types";
 import { useDashboardProfile } from "@/lib/workspace/useDashboardProfile";
 
@@ -22,6 +22,8 @@ function coerceDemoProfileKey(raw: string | null | undefined): SampleProfileId {
 export type WorkspaceContextValue = {
   organizationId: string | null;
   organization: SessionActiveOrganization | null;
+  /** Active org team membership (role = permissions; title = position label). */
+  activeMembership: SessionActiveMembership | null;
   /** Sample bundle key for benchmarks / legacy props */
   demoProfileKey: SampleProfileId;
   organizations: import("@/lib/auth/sessionOrganizations").SessionOrganizationSummary[];
@@ -37,6 +39,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { data: session, status, update } = useSession();
 
   const active = session?.user?.activeOrganization ?? null;
+  const activeMembership = session?.user?.activeMembership ?? null;
   const demoProfileKey = useMemo(() => coerceDemoProfileKey(active?.demoProfileKey), [active?.demoProfileKey]);
 
   const setActiveOrganization = useCallback(
@@ -56,6 +59,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return {
       organizationId: active?.id ?? null,
       organization: active,
+      activeMembership,
       demoProfileKey,
       organizations: orgs,
       setActiveOrganization,
@@ -63,7 +67,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       status,
       hasOrganization,
     };
-  }, [active, demoProfileKey, session?.user?.organizations, setActiveOrganization, refreshSession, status]);
+  }, [
+    active,
+    activeMembership,
+    demoProfileKey,
+    session?.user?.organizations,
+    setActiveOrganization,
+    refreshSession,
+    status,
+  ]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
@@ -75,9 +87,10 @@ export function useWorkspace() {
 }
 
 /**
- * @deprecated Prefer `useWorkspace()` + `useDashboardProfile()` — kept for gradual migration.
+ * Workspace + dashboard profile (mock bundle or live tenant snapshot).
+ * Prefer this name over `useDemoMode` for new code.
  */
-export function useDemoMode() {
+export function useWorkspaceData() {
   const w = useWorkspace();
   const dash = useDashboardProfile();
   return {
@@ -92,4 +105,11 @@ export function useDemoMode() {
     organizationId: w.organizationId,
     organization: w.organization,
   };
+}
+
+/**
+ * @deprecated Use `useWorkspaceData()` — name retained for gradual migration.
+ */
+export function useDemoMode() {
+  return useWorkspaceData();
 }

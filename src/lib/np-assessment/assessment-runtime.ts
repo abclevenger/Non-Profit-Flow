@@ -13,6 +13,10 @@ import {
 import { loadNpAssessmentCatalogFromDb } from "./load-catalog";
 import type { NpSeedCategory } from "./question-bank/types";
 
+export function isAssessmentClosedForEdits(status: string): boolean {
+  return status === "COMPLETED" || status === "SUBMITTED" || status === "ARCHIVED";
+}
+
 export async function ensureParticipant(assessmentId: string, userId: string) {
   const existing = await prisma.npAssessmentParticipant.findFirst({
     where: { assessmentId, userId },
@@ -47,11 +51,7 @@ export async function saveAssessmentResponses(
     where: { id: assessmentId },
     select: { status: true },
   });
-  if (
-    assessment?.status === "COMPLETED" ||
-    assessment?.status === "ARCHIVED" ||
-    assessment?.status === "SUBMITTED"
-  ) {
+  if (!assessment || isAssessmentClosedForEdits(assessment.status)) {
     throw new Error("This assessment is no longer editable.");
   }
 
@@ -93,6 +93,40 @@ export async function saveAssessmentResponses(
   });
 }
 
+/**
+ * Latest answer per indicator across all participants (org-wide run). Used for submit validation,
+ * final report, and exports when multiple users contributed sections.
+ */
+export async function responsesMergedForAssessment(
+  assessmentId: string,
+  categories: NpSeedCategory[],
+): Promise<Record<string, NpAnswerValue>> {
+  const allCodes = categories.flatMap((c) => c.questions.map((q) => q.code));
+  if (allCodes.length === 0) return {};
+
+  const questions = await prisma.npAssessmentQuestion.findMany({
+    where: { indicatorCode: { in: allCodes } },
+    select: { id: true, indicatorCode: true },
+  });
+  const idToCode = new Map(questions.map((q) => [q.id, q.indicatorCode]));
+
+  const rows = await prisma.npAssessmentResponse.findMany({
+    where: { assessmentId },
+    orderBy: { updatedAt: "desc" },
+    select: { questionId: true, answer: true },
+  });
+
+  const out: Record<string, NpAnswerValue> = {};
+  for (const r of rows) {
+    const code = idToCode.get(r.questionId);
+    if (!code || out[code] != null) continue;
+    if (r.answer === "MET" || r.answer === "NEEDS_WORK" || r.answer === "NA" || r.answer === "DONT_KNOW") {
+      out[code] = r.answer as NpAnswerValue;
+    }
+  }
+  return out;
+}
+
 export async function responsesRecordForParticipant(
   participantId: string,
   categories: NpSeedCategory[],
@@ -123,12 +157,34 @@ export async function countAnsweredForParticipant(participantId: string): Promis
   return n;
 }
 
+export type RecomputedReportBundle = {
+  report: NpAssessmentReportModel;
+  aiPayload: AiSummaryPayload;
+  responses: Record<string, NpAnswerValue>;
+};
+
+/**
+ * Rebuild report metrics from persisted `NpAssessmentResponse` rows only (no mock scoring).
+ */
+export async function recomputeReportBundleFromDatabase(assessmentId: string): Promise<RecomputedReportBundle | null> {
+  const categories = await loadNpAssessmentCatalogFromDb();
+  if (categories.length === 0) return null;
+
+  const responses = await responsesMergedForAssessment(assessmentId, categories);
+  const report = computeNpAssessmentReport(categories, responses);
+  const qMap = questionsMapFromCategories(categories);
+  const aiPayload = buildAiSummaryPayload(report, qMap);
+  return { report, aiPayload, responses };
+}
+
 export async function submitAssessment(
   assessmentId: string,
   participantId: string,
   userId: string,
   categories: NpSeedCategory[],
+  options?: { requireCompleteAnswers?: boolean },
 ) {
+  const requireComplete = options?.requireCompleteAnswers !== false;
   const assessment = await prisma.npAssessment.findUnique({
     where: { id: assessmentId },
     select: { status: true },
@@ -138,16 +194,23 @@ export async function submitAssessment(
   }
 
   const totalQs = categories.reduce((s, c) => s + c.questions.length, 0);
-  const answered = await prisma.npAssessmentResponse.count({ where: { participantId } });
-  if (answered < totalQs) {
-    throw new Error(`Incomplete assessment: ${answered}/${totalQs} questions answered.`);
+  const merged = await responsesMergedForAssessment(assessmentId, categories);
+  const mergedCount = Object.keys(merged).length;
+  if (requireComplete && mergedCount < totalQs) {
+    throw new Error(`Incomplete assessment: ${mergedCount}/${totalQs} questions answered across the organization.`);
   }
 
-  const responses = await responsesRecordForParticipant(participantId, categories);
+  const responses = merged;
   const report = computeNpAssessmentReport(categories, responses);
   const qMap = questionsMapFromCategories(categories);
   const aiPayload = buildAiSummaryPayload(report, qMap);
-  const payload = JSON.stringify({ report, aiPayload, responses, submittedByUserId: userId, submittedAt: new Date().toISOString() });
+  const payload = JSON.stringify({
+    report,
+    aiPayload,
+    responses,
+    submittedByUserId: userId,
+    submittedAt: new Date().toISOString(),
+  });
 
   await prisma.$transaction([
     prisma.npAssessment.update({
@@ -205,8 +268,8 @@ export async function loadAssessmentWorkspaceForUser(assessmentId: string, userI
   if (!assessment) return null;
   const participant = await ensureParticipant(assessmentId, userId);
   const categories = await loadNpAssessmentCatalogFromDb();
-  const responses = await responsesRecordForParticipant(participant.id, categories);
-  const answeredCount = await prisma.npAssessmentResponse.count({ where: { participantId: participant.id } });
+  const responses = await responsesMergedForAssessment(assessmentId, categories);
+  const answeredCount = Object.keys(responses).length;
   const totalQuestions = categories.reduce((s, c) => s + c.questions.length, 0);
   return {
     assessment,

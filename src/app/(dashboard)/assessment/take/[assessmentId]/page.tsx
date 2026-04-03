@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AssessmentWizardClient } from "@/components/np-assessment/AssessmentWizardClient";
 import { coerceOrgMembershipRole } from "@/lib/organizations/membershipRole";
-import { canPerformNpAssessmentAction } from "@/lib/np-assessment/np-assessment-permissions";
+import { canFillNpAssessmentWizard } from "@/lib/np-assessment/np-assessment-permissions";
 import { prisma } from "@/lib/prisma";
 
 export const metadata = {
@@ -21,18 +21,31 @@ export default async function AssessmentTakePage({ params }: Props) {
     redirect("/overview");
   }
   const role = coerceOrgMembershipRole(session.user.membershipRole ?? "VIEWER");
-  if (!canPerformNpAssessmentAction(role, session.user.isPlatformAdmin, "fill")) {
-    redirect("/forbidden?reason=assessment");
-  }
+  const isPlatform = session.user.isPlatformAdmin;
 
   const { assessmentId } = await params;
   const assessment = await prisma.npAssessment.findFirst({
     where: { id: assessmentId, organizationId },
-    select: { id: true },
+    select: { id: true, allowBoardMemberFill: true },
   });
   if (!assessment) {
     redirect("/assessment");
   }
 
-  return <AssessmentWizardClient organizationId={organizationId} assessmentId={assessmentId} />;
+  if (!canFillNpAssessmentWizard(role, isPlatform, assessment.allowBoardMemberFill)) {
+    redirect("/forbidden?reason=assessment-fill");
+  }
+
+  const org = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { isDemoTenant: true },
+  });
+
+  return (
+    <AssessmentWizardClient
+      organizationId={organizationId}
+      assessmentId={assessmentId}
+      organizationIsDemoTenant={Boolean(org?.isDemoTenant)}
+    />
+  );
 }

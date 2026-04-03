@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { assertOrgAccess } from "@/lib/organizations/orgAccess";
+import { coerceMembershipStatus } from "@/lib/organizations/membership-status";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,10 @@ export async function GET(_req: Request, ctx: Ctx) {
     members: rows.map((m) => ({
       membershipId: m.id,
       role: m.role,
+      title: m.title,
+      status: coerceMembershipStatus(m.status),
       createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
       user: m.user,
     })),
   });

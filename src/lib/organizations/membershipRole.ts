@@ -18,9 +18,16 @@ export const ORG_MEMBERSHIP_ROLES = [
 
 export type OrganizationMembershipRole = (typeof ORG_MEMBERSHIP_ROLES)[number];
 
+/** Accept alternate API/CSV values; normalized to canonical `OrganizationMembershipRole`. */
+const MEMBERSHIP_ROLE_ALIASES: Record<string, OrganizationMembershipRole> = {
+  ORGANIZATION_ADMIN: "ADMIN",
+  STAFF_MEMBER: "STAFF",
+};
+
 export function coerceOrgMembershipRole(raw: string): OrganizationMembershipRole {
-  if ((ORG_MEMBERSHIP_ROLES as readonly string[]).includes(raw)) {
-    return raw as OrganizationMembershipRole;
+  const normalized = MEMBERSHIP_ROLE_ALIASES[raw] ?? raw;
+  if ((ORG_MEMBERSHIP_ROLES as readonly string[]).includes(normalized)) {
+    return normalized as OrganizationMembershipRole;
   }
   return "VIEWER";
 }

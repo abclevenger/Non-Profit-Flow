@@ -8,6 +8,7 @@ export {
   WorkspaceProvider,
   useWorkspace,
   useDemoMode,
+  useWorkspaceData,
 } from "@/lib/workspace-context";
 
 export { WorkspaceProvider as DemoModeProvider } from "@/lib/workspace-context";

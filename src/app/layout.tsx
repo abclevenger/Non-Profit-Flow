@@ -18,9 +18,9 @@ const sans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Non-Profit Flow | Mission Impact Legal Advisors",
+  title: "Non-Profit Flow",
   description:
-    "Nonprofit board governance workspace—strategy, oversight, and compliance in one calm experience. Preview for planning with Mission Impact Legal Advisors.",
+    "Nonprofit board governance workspace—strategy, oversight, and compliance in one calm experience.",
 };
 
 export default function RootLayout({

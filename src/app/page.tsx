@@ -16,7 +16,7 @@ export default function HomePage() {
           />
           <p className="font-serif text-2xl font-semibold text-stone-900 sm:text-3xl">Non-Profit Flow</p>
         </div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Mission Impact Legal Advisors</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Nonprofit board governance</p>
         <h1 className="font-serif text-xl font-semibold text-stone-900 sm:text-2xl">Board governance workspace</h1>
         <p className="text-sm leading-relaxed text-stone-600">
           Sign in with your board email. We send a one-time code — no password. New users are created automatically on first

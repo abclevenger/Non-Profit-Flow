@@ -8,6 +8,7 @@ import { isMemberRole } from "@/lib/auth/roles";
 import {
   BoardReadinessBar,
   FocusHeroCard,
+  OverviewAssessmentSection,
   OverviewMoreDetailsTabs,
   QuickStatsRow,
   ThisWeekFlow,
@@ -353,6 +354,8 @@ export default function OverviewPage() {
           Prepare next meeting
         </Link>
       </div>
+
+      <OverviewAssessmentSection organizationId={organizationId} />
 
       {/* Hero focus */}
       <section className="space-y-6">

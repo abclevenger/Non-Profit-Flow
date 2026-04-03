@@ -1,3 +1,5 @@
+export { OverviewAssessmentSection } from "./OverviewAssessmentSection";
+export { OverviewConsultBanner } from "./OverviewConsultBanner";
 export { BoardReadinessBar } from "./BoardReadinessBar";
 export { FocusHeroCard } from "./FocusHeroCard";
 export { OverviewCollapsible } from "./OverviewCollapsible";

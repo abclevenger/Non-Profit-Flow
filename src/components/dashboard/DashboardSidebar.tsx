@@ -70,7 +70,7 @@ export function DashboardSidebar({
   const { data: session } = useSession();
   const { effectiveModules } = useOrganizationBranding();
 
-  const { mainNav, showOrgSettings } = useMemo(() => {
+  const { mainNav, settingsNavItems } = useMemo(() => {
     let items = navItems;
     const role = session?.user?.role;
     if (role && isMemberRole(role)) {
@@ -99,12 +99,23 @@ export function DashboardSidebar({
     if (role && isMemberRole(role) && canAccessReviewsQueue(role)) {
       items = [...items, { href: "/reviews", label: "Review requests" }];
     }
-    if (role && isMemberRole(role) && canManageIssueRouting(session as Session | null)) {
-      items = [...items, { href: "/settings/routing", label: "Issue routing" }];
-    }
-    const showSettings =
+    const showOrgSettings =
       role && isMemberRole(role) && canManageOrganizationSettings(session as Session | null);
-    return { mainNav: items, showOrgSettings: Boolean(showSettings) };
+    const settingsNavItems: { href: string; label: string; primary?: boolean }[] = [];
+    if (showOrgSettings) {
+      settingsNavItems.push(
+        { href: "/settings", label: "Organization", primary: true },
+        { href: "/settings/workspace", label: "Workspace ops" },
+        { href: "/settings/members", label: "Team members" },
+        { href: "/billing", label: "Billing" },
+      );
+    }
+    if (role && isMemberRole(role) && canManageIssueRouting(session as Session | null)) {
+      if (!settingsNavItems.some((i) => i.href === "/settings/routing")) {
+        settingsNavItems.push({ href: "/settings/routing", label: "Issue routing" });
+      }
+    }
+    return { mainNav: items, settingsNavItems };
   }, [navItems, session, effectiveModules]);
 
   const linkClass = (href: string, exact?: boolean) => {
@@ -184,21 +195,36 @@ export function DashboardSidebar({
             ))}
           </div>
         </div>
-        {showOrgSettings ? (
-          <div className="mt-3 flex shrink-0 flex-col gap-1 border-t border-stone-200/80 pt-3 lg:mt-auto">
-            <Link
-              href="/settings"
-              className={`${linkClass("/settings", true)} flex items-center justify-center gap-2 lg:justify-start`}
+        {settingsNavItems.length > 0 ? (
+          <div
+            className="mt-3 flex shrink-0 flex-col gap-1 border-t border-stone-200/80 pt-3 lg:mt-auto"
+            role="region"
+            aria-labelledby="sidebar-settings-heading"
+          >
+            <h2
+              id="sidebar-settings-heading"
+              className="px-3 pb-1 text-xs font-bold uppercase tracking-wide text-stone-500"
             >
-              <GearIcon className="shrink-0 opacity-80" />
               Settings
-            </Link>
-            <Link href="/settings/workspace" className={linkClass("/settings/workspace", true)}>
-              Workspace ops
-            </Link>
-            <Link href="/settings/members" className={linkClass("/settings/members", true)}>
-              Members
-            </Link>
+            </h2>
+            <div className="flex flex-col gap-1">
+              {settingsNavItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`${linkClass(item.href, true)} ${
+                    item.primary
+                      ? "flex items-center justify-center gap-2 lg:justify-start"
+                      : ""
+                  }`}
+                >
+                  {item.primary ? (
+                    <GearIcon className="shrink-0 opacity-80" aria-hidden />
+                  ) : null}
+                  {item.label}
+                </Link>
+              ))}
+            </div>
           </div>
         ) : null}
       </nav>

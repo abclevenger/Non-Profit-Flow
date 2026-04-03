@@ -16,6 +16,7 @@ type WorkspaceJson = {
     currentCategoryIndex: number;
     submittedAt: string | null;
     organizationId: string;
+    allowBoardMemberFill?: boolean;
   };
   categories: NpSeedCategory[];
   responses: Record<string, NpAnswerValue>;
@@ -27,9 +28,12 @@ type WorkspaceJson = {
 export function AssessmentWizardClient({
   organizationId,
   assessmentId,
+  organizationIsDemoTenant = false,
 }: {
   organizationId: string;
   assessmentId: string;
+  /** Demo orgs may submit with unanswered items (server-enforced); live orgs require 100% completion. */
+  organizationIsDemoTenant?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -169,15 +173,18 @@ export function AssessmentWizardClient({
 
   const submit = async () => {
     if (!workspace) return;
-    if (answeredCount < totalQs) {
-      const ok = window.confirm(
-        `Only ${answeredCount} of ${totalQs} questions are answered. Submit anyway? (Submit may fail until complete.)`,
-      );
-      if (!ok) return;
-    } else {
-      const ok = window.confirm("Submit this assessment? You will not be able to edit answers afterward.");
-      if (!ok) return;
+    if (!organizationIsDemoTenant && answeredCount < totalQs) {
+      setError(`Answer all ${totalQs} questions before submitting. Currently ${answeredCount} answered (live organization).`);
+      return;
     }
+    if (organizationIsDemoTenant && answeredCount < totalQs) {
+      const okPartial = window.confirm(
+        `Only ${answeredCount} of ${totalQs} questions are answered. Submit anyway? (Allowed for demo organizations only.)`,
+      );
+      if (!okPartial) return;
+    }
+    const ok = window.confirm("Submit this assessment? You will not be able to edit answers afterward.");
+    if (!ok) return;
     if (current) await flushSave(current.questions.map((q) => q.code));
     try {
       const r = await fetch(`/api/organizations/${organizationId}/np-assessments/${assessmentId}/submit`, {
@@ -336,7 +343,8 @@ export function AssessmentWizardClient({
             <button
               type="button"
               onClick={() => void submit()}
-              className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800"
+              disabled={!organizationIsDemoTenant && answeredCount < totalQs}
+              className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Submit assessment
             </button>

@@ -226,16 +226,18 @@ async function main() {
     userId: string;
     organizationId: string;
     role: SeedOrgRole;
+    title?: string | null;
+    status?: string;
   }[] = [
-    { userId: adminUser.id, organizationId: community.id, role: "OWNER" },
-    { userId: adminUser.id, organizationId: growing.id, role: "OWNER" },
-    { userId: adminUser.id, organizationId: school.id, role: "OWNER" },
-    { userId: adminUser.id, organizationId: legalAid.id, role: "OWNER" },
-    { userId: adminUser.id, organizationId: youthAlliance.id, role: "OWNER" },
-    { userId: memberUser.id, organizationId: community.id, role: "BOARD_MEMBER" },
-    { userId: memberUser.id, organizationId: growing.id, role: "BOARD_MEMBER" },
-    { userId: memberUser.id, organizationId: legalAid.id, role: "BOARD_MEMBER" },
-    { userId: guestUser.id, organizationId: community.id, role: "VIEWER" },
+    { userId: adminUser.id, organizationId: community.id, role: "OWNER", title: "Executive Director" },
+    { userId: adminUser.id, organizationId: growing.id, role: "OWNER", title: "Founder & CEO" },
+    { userId: adminUser.id, organizationId: school.id, role: "OWNER", title: "Head of School" },
+    { userId: adminUser.id, organizationId: legalAid.id, role: "OWNER", title: "Managing Attorney" },
+    { userId: adminUser.id, organizationId: youthAlliance.id, role: "OWNER", title: "Executive Director" },
+    { userId: memberUser.id, organizationId: community.id, role: "BOARD_MEMBER", title: "Board Secretary" },
+    { userId: memberUser.id, organizationId: growing.id, role: "BOARD_MEMBER", title: "Treasurer" },
+    { userId: memberUser.id, organizationId: legalAid.id, role: "BOARD_MEMBER", title: "Board Member" },
+    { userId: guestUser.id, organizationId: community.id, role: "VIEWER", title: "Community volunteer" },
   ];
 
   for (const m of membershipPairs) {
@@ -243,8 +245,18 @@ async function main() {
       where: {
         organizationId_userId: { organizationId: m.organizationId, userId: m.userId },
       },
-      create: m,
-      update: { role: m.role },
+      create: {
+        userId: m.userId,
+        organizationId: m.organizationId,
+        role: m.role,
+        title: m.title ?? null,
+        status: m.status ?? "ACTIVE",
+      },
+      update: {
+        role: m.role,
+        title: m.title ?? null,
+        status: m.status ?? "ACTIVE",
+      },
     });
   }
 

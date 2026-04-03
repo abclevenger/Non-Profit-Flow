@@ -204,20 +204,6 @@ export function computeNpAssessmentReport(
   };
 }
 
-/** Deterministic sample responses for demo report (mix of answers). */
-export function demoResponsesForCategories(categories: NpSeedCategory[]): Record<string, NpAnswerValue> {
-  const out: Record<string, NpAnswerValue> = {};
-  const cycle: NpAnswerValue[] = ["MET", "MET", "NEEDS_WORK", "DONT_KNOW", "NA", "MET"];
-  let i = 0;
-  for (const c of categories) {
-    for (const q of c.questions) {
-      out[q.code] = cycle[i % cycle.length]!;
-      i += 1;
-    }
-  }
-  return out;
-}
-
 export type AiSummaryPayload = {
   categoryBlocks: Pick<
     CategoryScoreBlock,

@@ -2,6 +2,8 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { canManageOrganizationSettings } from "@/lib/organization-settings/permissions";
 import { prisma } from "@/lib/prisma";
+import { coerceOrgMembershipRole } from "@/lib/organizations/membershipRole";
+import { membershipRoleDisplayLabel } from "@/lib/saas/roles";
 
 export default async function OrganizationMembersPage() {
   const session = await auth();
@@ -28,10 +30,10 @@ export default async function OrganizationMembersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-2xl font-semibold text-stone-900">Members</h1>
+        <h1 className="font-serif text-2xl font-semibold text-stone-900">Team members</h1>
         <p className="mt-2 text-sm text-stone-600">
-          {org?.name ?? "Organization"} — roles are enforced server-side on APIs and in Supabase RLS after
-          membership sync.
+          {org?.name ?? "Organization"} — permission roles drive access; titles are display-only. APIs and Supabase
+          RLS use synced membership (active members only for tenant data).
           {org?.isDemoTenant ? " Demo tenant: restrict who can be assigned via user flags and platform admin." : null}
         </p>
       </div>
@@ -41,25 +43,44 @@ export default async function OrganizationMembersPage() {
             <tr>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Email</th>
+              <th className="px-4 py-3">Title</th>
               <th className="px-4 py-3">Role</th>
+              <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Demo OK</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
-            {rows.map((m) => (
-              <tr key={m.id}>
-                <td className="px-4 py-3 font-medium text-stone-900">{m.user.name ?? "—"}</td>
-                <td className="px-4 py-3 text-stone-700">{m.user.email}</td>
-                <td className="px-4 py-3">
-                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold text-stone-800">
-                    {m.role}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-stone-600">
-                  {m.user.allowDemoOrganizationAssignment ? "Yes" : "—"}
-                </td>
-              </tr>
-            ))}
+            {rows.map((m) => {
+              const membershipRole = coerceOrgMembershipRole(m.role);
+              return (
+                <tr key={m.id}>
+                  <td className="px-4 py-3 font-medium text-stone-900">{m.user.name ?? "—"}</td>
+                  <td className="px-4 py-3 text-stone-700">{m.user.email}</td>
+                  <td className="px-4 py-3 text-stone-700">{m.title?.trim() ? m.title : "—"}</td>
+                  <td className="px-4 py-3">
+                    <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold text-stone-800">
+                      {membershipRoleDisplayLabel(membershipRole)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={
+                        m.status === "ACTIVE"
+                          ? "text-emerald-800"
+                          : m.status === "INACTIVE"
+                            ? "text-stone-500"
+                            : "text-stone-700"
+                      }
+                    >
+                      {m.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-stone-600">
+                    {m.user.allowDemoOrganizationAssignment ? "Yes" : "—"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

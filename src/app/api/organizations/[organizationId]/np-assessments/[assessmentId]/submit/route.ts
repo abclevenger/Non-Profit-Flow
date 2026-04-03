@@ -35,8 +35,14 @@ export async function POST(_req: Request, ctx: Ctx) {
     if (categories.length === 0) {
       return NextResponse.json({ error: "Assessment catalog not seeded" }, { status: 503 });
     }
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { isDemoTenant: true },
+    });
     const participant = await ensureParticipant(assessmentId, session!.user!.id);
-    const result = await submitAssessment(assessmentId, participant.id, session!.user!.id, categories);
+    const result = await submitAssessment(assessmentId, participant.id, session!.user!.id, categories, {
+      requireCompleteAnswers: !org?.isDemoTenant,
+    });
     return NextResponse.json({ ok: true, report: result.report, aiPayload: result.aiPayload });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Submit failed";

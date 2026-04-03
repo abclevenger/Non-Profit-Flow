@@ -5,11 +5,18 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import type { AppSession } from "@/lib/auth/app-session";
+import {
+  consumeOauthTrustIntent,
+  trustedDeviceExpiryRequiresReauth,
+  writeTrustedDeviceMarker,
+  clearTrustedDeviceMarker,
+} from "@/lib/auth/trusted-device";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -21,20 +28,55 @@ type AppAuthContextValue = {
 
 const AppAuthContext = createContext<AppAuthContextValue | null>(null);
 
+const ME_RETRY_MS = 450;
+
 export function AppAuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [session, setSession] = useState<AppSession | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
+  const oauthIntentApplied = useRef(false);
 
   const fetchSession = useCallback(async () => {
     try {
-      const r = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
-      const data = (await r.json()) as AppSession | { user: null };
+      let supabaseHasUser = false;
+
+      try {
+        const { createBrowserSupabaseClient } = await import("@/lib/supabase/browser");
+        const sb = createBrowserSupabaseClient();
+
+        if (trustedDeviceExpiryRequiresReauth()) {
+          clearTrustedDeviceMarker();
+          await sb.auth.signOut();
+        }
+
+        const { data } = await sb.auth.getSession();
+        supabaseHasUser = Boolean(data.session?.user);
+      } catch {
+        /* Supabase env missing */
+      }
+
+      const readMe = async () => {
+        const r = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
+        return (await r.json()) as AppSession | { user: null };
+      };
+
+      let data = await readMe();
       if (data && "user" in data && data.user) {
         setSession(data as AppSession);
         setStatus("authenticated");
         return;
       }
+
+      if (supabaseHasUser) {
+        await new Promise((r) => setTimeout(r, ME_RETRY_MS));
+        data = await readMe();
+        if (data && "user" in data && data.user) {
+          setSession(data as AppSession);
+          setStatus("authenticated");
+          return;
+        }
+      }
+
       setSession(null);
       setStatus("unauthenticated");
     } catch {
@@ -46,6 +88,23 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void fetchSession();
   }, [fetchSession]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") oauthIntentApplied.current = false;
+  }, [status]);
+
+  /** After OAuth / magic-link callback, apply “trust device” from sessionStorage. */
+  useEffect(() => {
+    if (status !== "authenticated" || oauthIntentApplied.current) return;
+    const intent = consumeOauthTrustIntent();
+    if (intent === null) return;
+    oauthIntentApplied.current = true;
+    if (intent) {
+      writeTrustedDeviceMarker();
+    } else {
+      clearTrustedDeviceMarker();
+    }
+  }, [status]);
 
   /** Mirror Prisma memberships to Supabase for RLS-backed tenant reads (no-op if misconfigured). */
   useEffect(() => {

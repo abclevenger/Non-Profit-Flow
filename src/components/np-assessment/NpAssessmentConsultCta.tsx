@@ -31,8 +31,8 @@ export function NpAssessmentConsultCta({
     <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50 to-orange-50/80 p-5 shadow-sm ring-1 ring-amber-100">
       <h3 className="font-serif text-lg font-semibold text-stone-900">Schedule a Consult</h3>
       <p className="mt-2 text-sm leading-relaxed text-stone-700">
-        One or more practices are not marked <span className="font-medium text-emerald-800">Met</span>. Mission Impact Legal
-        Advisors can help you prioritize remediation and board-ready next steps.
+        One or more practices are not marked <span className="font-medium text-emerald-800">Met</span>. Non-Profit Flow can
+        help you prioritize remediation and board-ready next steps.
       </p>
       <Link
         href={href}

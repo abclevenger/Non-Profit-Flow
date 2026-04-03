@@ -7,10 +7,10 @@ export async function getSessionUserId(): Promise<string | null> {
   return session?.user?.id ?? null;
 }
 
-/** Returns membership if user belongs to org; otherwise null. */
+/** Returns membership if user has an **active** row in the org; otherwise null. */
 export async function requireOrgMembership(userId: string, organizationId: string) {
   return prisma.organizationMembership.findFirst({
-    where: { userId, organizationId },
+    where: { userId, organizationId, status: "ACTIVE" },
     include: { organization: true },
   });
 }

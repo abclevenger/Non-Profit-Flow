@@ -10,6 +10,7 @@ import {
 } from "react";
 import { getDashboardProfile } from "@/lib/mock-data/dashboardData";
 import type { OrganizationProfile, SampleProfileId } from "@/lib/mock-data/types";
+import { orgShouldFetchTenantSnapshot } from "@/lib/saas/dashboard-source";
 import { useWorkspace } from "@/lib/workspace-context";
 
 function coerceProfileKey(raw: string | null | undefined): SampleProfileId {
@@ -31,7 +32,7 @@ const DashboardProfileContext = createContext<DashboardProfileState | null>(null
 
 function useDashboardProfileState(): DashboardProfileState {
   const { organizationId, organization, demoProfileKey } = useWorkspace();
-  const useLive = Boolean(organization?.useSupabaseTenantData && organizationId);
+  const useLive = Boolean(organizationId && orgShouldFetchTenantSnapshot(organization ?? undefined));
 
   const mockProfile = useMemo(
     () => getDashboardProfile(coerceProfileKey(demoProfileKey)),

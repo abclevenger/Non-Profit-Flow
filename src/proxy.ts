@@ -29,6 +29,10 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith("/api/supabase/")) {
     return supabaseResponse;
   }
+  // Stripe sends signed webhooks without browser cookies; must not redirect to login.
+  if (pathname === "/api/stripe/webhook" || pathname.startsWith("/api/stripe/webhook/")) {
+    return supabaseResponse;
+  }
 
   if (isPublic) {
     return supabaseResponse;

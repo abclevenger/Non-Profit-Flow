@@ -3,8 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  clearOauthTrustIntent,
+  clearTrustedDeviceMarker,
+  setOauthTrustIntent,
+  writeTrustedDeviceMarker,
+} from "@/lib/auth/trusted-device";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+
+const RESEND_COOLDOWN_SEC = 60;
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   oauth: "Sign-in with LinkedIn did not complete. Try again or use email code.",
@@ -23,10 +31,23 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [oauthPending, setOauthPending] = useState(false);
+  const [resendHint, setResendHint] = useState<string | null>(null);
+  const [resendCooldownSec, setResendCooldownSec] = useState(0);
+  const [trustDevice, setTrustDevice] = useState(true);
+
+  const resendCooldownActive = resendCooldownSec > 0;
+  useEffect(() => {
+    if (!resendCooldownActive) return;
+    const id = window.setInterval(() => {
+      setResendCooldownSec((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [resendCooldownActive]);
 
   async function signInWithLinkedIn() {
     setError(null);
     setOauthPending(true);
+    setOauthTrustIntent(trustDevice);
     try {
       const sb = createBrowserSupabaseClient();
       const safeNext = callbackUrl.startsWith("/") ? callbackUrl : "/overview";
@@ -36,10 +57,12 @@ export function LoginForm() {
         options: { redirectTo },
       });
       if (err) {
+        clearOauthTrustIntent();
         setError(err.message);
         setOauthPending(false);
       }
     } catch (caught) {
+      clearOauthTrustIntent();
       setError(caught instanceof Error ? caught.message : "LinkedIn sign-in failed.");
       setOauthPending(false);
     }
@@ -48,6 +71,7 @@ export function LoginForm() {
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setResendHint(null);
     setPending(true);
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
@@ -70,10 +94,47 @@ export function LoginForm() {
         setPending(false);
         return;
       }
+      clearOauthTrustIntent();
       setStep("otp");
+      setResendHint(null);
+      setResendCooldownSec(RESEND_COOLDOWN_SEC);
     } catch (caught) {
-      const msg = caught instanceof Error ? caught.message : "Could not reach Supabase. Check environment variables.";
+      const msg =
+        caught instanceof Error ? caught.message : "We could not send a code right now. Please try again in a moment.";
       setError(msg);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function resendOtp() {
+    setError(null);
+    setResendHint(null);
+    setPending(true);
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) {
+      setPending(false);
+      return;
+    }
+    try {
+      const sb = createBrowserSupabaseClient();
+      const safeNext = callbackUrl.startsWith("/") ? callbackUrl : "/overview";
+      const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+      const { error: err } = await sb.auth.signInWithOtp({
+        email: normalized,
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo,
+        },
+      });
+      if (err) {
+        setError(err.message);
+        return;
+      }
+      setResendHint("We sent another code to your email.");
+      setResendCooldownSec(RESEND_COOLDOWN_SEC);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "We could not resend the code. Try again shortly.");
     } finally {
       setPending(false);
     }
@@ -81,6 +142,7 @@ export function LoginForm() {
 
   async function verifyOtp(e: React.FormEvent) {
     e.preventDefault();
+    clearOauthTrustIntent();
     setError(null);
     setPending(true);
     const normalized = email.trim().toLowerCase();
@@ -100,6 +162,11 @@ export function LoginForm() {
         setError(err.message);
         setPending(false);
         return;
+      }
+      if (trustDevice) {
+        writeTrustedDeviceMarker();
+      } else {
+        clearTrustedDeviceMarker();
       }
       router.push(callbackUrl.startsWith("/") ? callbackUrl : "/overview");
       router.refresh();
@@ -137,16 +204,46 @@ export function LoginForm() {
         </p>
       ) : null}
 
-      {step === "otp" && !error && !urlError ? (
-        <p className="mt-4 rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-700 ring-1 ring-stone-200/80">
-          No email after a minute? Check spam, then in Supabase open{" "}
-          <span className="font-medium text-stone-900">Authentication → Logs</span> for send errors. Under{" "}
-          <span className="font-medium text-stone-900">URL configuration</span>, add your app&apos;s{" "}
-          <code className="rounded bg-stone-200/80 px-1 py-0.5 text-xs">/auth/callback</code> URL (e.g.{" "}
-          <code className="rounded bg-stone-200/80 px-1 py-0.5 text-xs">http://localhost:3000/auth/callback</code>
-          ) to redirect URLs. The sign-in email template should include the code placeholder{" "}
-          <code className="rounded bg-stone-200/80 px-1 py-0.5 text-xs">{"{{ .Token }}"}</code>.
-        </p>
+      {step === "otp" ? (
+        <div className="mt-4 space-y-3 rounded-lg bg-stone-50/90 px-3 py-3 text-sm text-stone-600 ring-1 ring-stone-200/80">
+          <p>
+            Most codes arrive within a minute. If you don&apos;t see it, check your <span className="font-medium text-stone-800">spam</span> or{" "}
+            <span className="font-medium text-stone-800">promotions</span> folder.
+          </p>
+          <p className="text-stone-500">
+            Wrong address? Use <span className="font-medium text-stone-700">Use a different email</span> below.
+          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-stone-200/80 pt-3">
+            <button
+              type="button"
+              onClick={() => void resendOtp()}
+              disabled={pending || resendCooldownSec > 0}
+              className="text-sm font-semibold text-stone-800 underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50"
+            >
+              {pending
+                ? "Sending…"
+                : resendCooldownSec > 0
+                  ? `Resend code in ${resendCooldownSec}s`
+                  : "Resend code"}
+            </button>
+            <span className="text-stone-400" aria-hidden>
+              ·
+            </span>
+            <a
+              href="https://www.mission-impact.legal/contact"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-semibold text-stone-800 underline-offset-4 hover:underline"
+            >
+              Contact support
+            </a>
+          </div>
+          {resendHint ? (
+            <p className="text-sm font-medium text-emerald-800" role="status">
+              {resendHint}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {step === "email" ? (
@@ -166,6 +263,11 @@ export function LoginForm() {
               className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm outline-none ring-stone-200 focus:ring-2"
             />
           </div>
+          <TrustDeviceCheckbox
+            id="trust-device-email"
+            checked={trustDevice}
+            onCheckedChange={setTrustDevice}
+          />
           <button
             type="submit"
             disabled={pending}
@@ -212,6 +314,11 @@ export function LoginForm() {
               className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm outline-none ring-stone-200 focus:ring-2"
             />
           </div>
+          <TrustDeviceCheckbox
+            id="trust-device-otp"
+            checked={trustDevice}
+            onCheckedChange={setTrustDevice}
+          />
           <button
             type="submit"
             disabled={pending}
@@ -225,6 +332,8 @@ export function LoginForm() {
               setStep("email");
               setOtp("");
               setError(null);
+              setResendHint(null);
+              setResendCooldownSec(0);
             }}
             className="w-full text-sm font-medium text-stone-600 underline-offset-4 hover:underline"
           >
@@ -239,6 +348,34 @@ export function LoginForm() {
         </Link>
       </div>
     </div>
+  );
+}
+
+function TrustDeviceCheckbox({
+  id,
+  checked,
+  onCheckedChange,
+}: {
+  id: string;
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+}) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-3 text-sm text-stone-700">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onCheckedChange(e.target.checked)}
+        className="mt-1 h-4 w-4 shrink-0 rounded border-stone-300 text-stone-900"
+      />
+      <span>
+        <span className="font-medium text-stone-900">Trust this device for 30 days</span>
+        <span className="mt-0.5 block text-xs text-stone-500">
+          Stay signed in after restarts and brief idle periods on this browser. Leave unchecked on shared computers.
+        </span>
+      </span>
+    </label>
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession } from "@/lib/auth/session-hooks";
+import { membershipRoleDisplayLabel } from "@/lib/saas/roles";
 import { useWorkspace } from "@/lib/workspace-context";
 
 export function OrganizationSwitcher() {
@@ -46,11 +47,16 @@ export function OrganizationSwitcher() {
         className="max-w-full rounded-lg border border-stone-200/90 bg-white/90 px-3 py-2 text-sm font-medium text-stone-900 shadow-sm backdrop-blur-sm outline-none ring-stone-200 transition-shadow focus:border-stone-300 focus:ring-2 focus:ring-stone-200/80"
         aria-describedby="active-organization-hint"
       >
-        {organizations.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.isDemoTenant ? `${o.name} (demo)` : o.name}
-          </option>
-        ))}
+        {organizations.map((o) => {
+          const roleLabel = membershipRoleDisplayLabel(o.membershipRole);
+          const subtitle = [o.membershipTitle, roleLabel].filter(Boolean).join(" · ");
+          return (
+            <option key={o.id} value={o.id}>
+              {o.isDemoTenant ? `${o.name} (demo)` : o.name}
+              {subtitle ? ` — ${subtitle}` : ""}
+            </option>
+          );
+        })}
       </select>
       <p id="active-organization-hint" className="text-[11px] text-stone-500">
         Switch organization

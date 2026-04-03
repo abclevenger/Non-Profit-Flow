@@ -34,7 +34,9 @@ export async function POST() {
   const sb = createServiceRoleSupabaseClient();
   const uid = user.supabaseAuthId;
 
-  for (const m of user.organizationMemberships) {
+  const activeMemberships = user.organizationMemberships.filter((m) => m.status === "ACTIVE");
+
+  for (const m of activeMemberships) {
     const org = m.organization;
     const { error: tErr } = await sb.from("tenant_organizations").upsert(
       {
@@ -55,6 +57,8 @@ export async function POST() {
       organization_id: org.id,
       user_id: uid,
       role: m.role,
+      title: m.title ?? null,
+      status: m.status,
       updated_at: new Date().toISOString(),
     });
     if (mErr) {
@@ -62,5 +66,5 @@ export async function POST() {
     }
   }
 
-  return NextResponse.json({ ok: true, synced: user.organizationMemberships.length });
+  return NextResponse.json({ ok: true, synced: activeMemberships.length });
 }

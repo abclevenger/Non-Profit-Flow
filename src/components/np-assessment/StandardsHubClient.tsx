@@ -13,9 +13,11 @@ import { StandardsPositioningBanner } from "./StandardsPositioningBanner";
 export function StandardsHubClient({
   report,
   pillarCards,
+  variant = "live",
 }: {
   report: NpAssessmentReportModel;
   pillarCards: StandardsPillarCard[];
+  variant?: "demo" | "live";
 }) {
   const { organization } = useWorkspace();
   const health = computeGovernanceHealthScore(report);
@@ -24,6 +26,12 @@ export function StandardsHubClient({
   return (
     <div className={hasFlagged ? "pb-28 lg:pb-8" : ""}>
       <div className="mx-auto max-w-6xl space-y-10 px-4 py-8 lg:px-8">
+        {variant === "demo" ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-950">
+            Demo organization: pillar preview uses illustrative responses. Live customers only see data from submitted
+            assessments.
+          </p>
+        ) : null}
         <StandardsPositioningBanner />
 
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
