@@ -5,7 +5,7 @@ export default function HomePage() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[#f7f5f2] px-6 py-16 text-center">
       <div className="max-w-lg space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Mission Impact Legal Advisors</p>
-        <h1 className="font-serif text-3xl font-semibold text-stone-900 sm:text-4xl">Board Oversight Dashboard</h1>
+        <h1 className="font-serif text-3xl font-semibold text-stone-900 sm:text-4xl">Governance</h1>
         <p className="text-sm leading-relaxed text-stone-600">
           Sign in with your board email to open the secure preview. Password sign-in supports authenticator apps for admin
           and chair roles; SSO is available when configured.

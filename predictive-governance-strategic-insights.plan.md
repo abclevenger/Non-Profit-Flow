@@ -2,7 +2,7 @@
 
 ## Goal
 
-Strengthen the Board Oversight Dashboard with **proactive governance prompts**, **lightweight scenario modeling**, and **anonymized benchmarking**—surfaced **in context** (overview, voting, grants, compliance, strategy) so boards can **act sooner** and **govern with clearer foresight**. This remains a **demo-first** product: rules run on **mock profile data** and **derived signals**; benchmarking uses **curated synthetic cohort stats** until a real analytics pipeline exists.
+Strengthen **Governance** with **proactive governance prompts**, **lightweight scenario modeling**, and **anonymized benchmarking**—surfaced **in context** (overview, voting, grants, compliance, strategy) so boards can **act sooner** and **govern with clearer foresight**. This remains a **demo-first** product: rules run on **mock profile data** and **derived signals**; benchmarking uses **curated synthetic cohort stats** until a real analytics pipeline exists.
 
 **Related:** [AI-driven agenda & planning support](./ai-agenda-planning-support.plan.md) adds an **LLM agenda builder**, **AI prioritization**, **AI narrative** for scenarios/benchmarks, and **chair facilitation nudges**—with **heuristic fallbacks** when no API key is configured.
 

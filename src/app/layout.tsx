@@ -18,9 +18,9 @@ const sans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Board Oversight Dashboard | Mission Impact Legal Advisors",
+  title: "Governance | Mission Impact Legal Advisors",
   description:
-    "A nonprofit board-facing strategic oversight dashboard preview for discussion and planning with Mission Impact Legal Advisors.",
+    "Nonprofit board governance workspace—strategy, oversight, and compliance in one calm experience. Preview for planning with Mission Impact Legal Advisors.",
 };
 
 export default function RootLayout({

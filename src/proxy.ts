@@ -15,7 +15,7 @@ function copyCookies(from: NextResponse, to: NextResponse) {
   });
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const supabaseResponse = await updateSession(req);
   const { pathname } = req.nextUrl;
   const publicPaths = ["/", "/login", "/register", "/forgot-password", "/reset-password"];

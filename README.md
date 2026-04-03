@@ -1,4 +1,4 @@
-# Board Oversight Dashboard
+# Governance
 
 A **standalone demo web app** for **Mission Impact Legal Advisors** Ã¢â‚¬â€ a calm, board-facing **strategic oversight** prototype for nonprofit leaders. It uses **local mock data only** (local mock data for the dashboard; **authentication** protects the app (see Authentication below)).
 
@@ -131,7 +131,7 @@ Look for short comments in:
 
 ## Product name
 
-The shell shows **Board Oversight Dashboard** as the product line; Mission Impact Legal Advisors can be referenced in metadata and README as the firm presenting the demo.
+The shell shows **Governance** as the product line; Mission Impact Legal Advisors can be referenced in metadata and README as the firm presenting the demo.
 
 ---
 

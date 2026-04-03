@@ -12,7 +12,7 @@ export type DashboardHeaderProps = {
 };
 
 export function DashboardHeader({
-  productName = "Board Oversight Dashboard",
+  productName = "Governance",
   orgName,
   reportingPeriod,
   ctaHref = "https://www.missionimpactlegal.com/contact",
