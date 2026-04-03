@@ -4,6 +4,7 @@ export const MEMBER_ROLES = [
   "BOARD_MEMBER",
   "COMMITTEE_MEMBER",
   "EXECUTIVE_DIRECTOR",
+  "GENERAL_COUNSEL",
   "GUEST",
 ] as const;
 
@@ -23,5 +24,6 @@ export const ROLE_LABELS: Record<MemberRole, string> = {
   BOARD_MEMBER: "Board Member",
   COMMITTEE_MEMBER: "Committee Member",
   EXECUTIVE_DIRECTOR: "Executive Director / Staff",
+  GENERAL_COUNSEL: "General Counsel",
   GUEST: "Guest / Viewer",
 };

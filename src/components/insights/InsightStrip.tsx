@@ -14,6 +14,8 @@ export type InsightStripProps = {
   title?: string;
   description?: string;
   maxVisible?: number;
+  /** Return false to show a note instead of navigating (e.g. guest role vs /voting). */
+  followInsightHref?: (href: string) => boolean;
 };
 
 export function InsightStrip({
@@ -21,6 +23,7 @@ export function InsightStrip({
   title = "Insights for your board",
   description = "Planning prompts from this demo profile — not legal advice.",
   maxVisible = 5,
+  followInsightHref = () => true,
 }: InsightStripProps) {
   const shown = insights.slice(0, maxVisible);
 
@@ -35,9 +38,9 @@ export function InsightStrip({
 
   return (
     <section className="rounded-2xl border border-stone-200/80 bg-white/60 p-5 shadow-sm ring-1 ring-white/50 backdrop-blur-md">
-      <h2 className="font-serif text-lg font-semibold text-stone-900">{title}</h2>
-      <p className="mt-1 text-sm text-stone-600">{description}</p>
-      <ul className="mt-4 space-y-3">
+      {title ? <h2 className="font-serif text-lg font-semibold text-stone-900">{title}</h2> : null}
+      {description ? <p className={`text-sm text-stone-600 ${title ? "mt-1" : ""}`}>{description}</p> : null}
+      <ul className={`space-y-3 ${title || description ? "mt-4" : ""}`}>
         {shown.map((i) => (
           <li
             key={i.id}
@@ -45,12 +48,18 @@ export function InsightStrip({
           >
             <p className="font-semibold">{i.title}</p>
             <p className="mt-1 leading-relaxed opacity-95">{i.detail}</p>
-            <Link
-              href={i.href}
-              className="mt-2 inline-block text-xs font-bold uppercase tracking-wide underline-offset-4 hover:underline"
-            >
-              Open related area
-            </Link>
+            {followInsightHref(i.href) ? (
+              <Link
+                href={i.href}
+                className="mt-2 inline-block text-xs font-bold uppercase tracking-wide underline-offset-4 hover:underline"
+              >
+                Open related area
+              </Link>
+            ) : (
+              <p className="mt-2 text-xs font-medium opacity-90">
+                Related app area is limited for your current role — ask an administrator if you need access.
+              </p>
+            )}
           </li>
         ))}
       </ul>

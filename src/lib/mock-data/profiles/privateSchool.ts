@@ -88,7 +88,13 @@ export const privateSchoolProfile: OrganizationProfile = {
   risks: [
     { category: "Governance", status: "Low", summary: "Board committees active; policies current.", trend: "stable" },
     { category: "Financial", status: "Medium", summary: "Tuition dependency; aid demand rising with enrollment growth.", watchlist: true, trend: "stable" },
-    { category: "Compliance", status: "Medium", summary: "Education regulations and safety reporting require ongoing attention.", trend: "stable" },
+    {
+      category: "Compliance",
+      status: "High",
+      summary: "Evolving state reporting rules and safety drills need documented board oversight this cycle.",
+      watchlist: true,
+      trend: "rising",
+    },
     { category: "HR / staffing", status: "Low", summary: "Faculty hiring on track for fall needs.", trend: "stable" },
     { category: "Reputational", status: "Medium", summary: "Competitive market; narrative must stay clear on mission and outcomes.", trend: "stable" },
   ],

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { BoardVoteItem } from "@/lib/mock-data/types";
 import { PublicVisibilityTag } from "./PublicVisibilityTag";
 import { VoteStatusPill } from "./VoteStatusPill";
@@ -5,9 +6,11 @@ import { VoteStatusPill } from "./VoteStatusPill";
 export type VoteItemCardProps = {
   vote: BoardVoteItem;
   urgency?: "openingSoon" | "closingSoon" | "followUp" | null;
+  /** General Counsel flag row — pass a client toolbar from the parent. */
+  gcReviewFooter?: ReactNode;
 };
 
-export function VoteItemCard({ vote, urgency }: VoteItemCardProps) {
+export function VoteItemCard({ vote, urgency, gcReviewFooter }: VoteItemCardProps) {
   const u =
     urgency ??
     (vote.status === "Scheduled"
@@ -94,6 +97,7 @@ export function VoteItemCard({ vote, urgency }: VoteItemCardProps) {
           ) : null}
         </div>
       )}
+      {gcReviewFooter ? <div className="mt-4 border-t border-stone-200/70 pt-4">{gcReviewFooter}</div> : null}
     </article>
   );
 }

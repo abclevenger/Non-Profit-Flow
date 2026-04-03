@@ -14,13 +14,15 @@ model User {
   emailVerified    DateTime?
   image            String?
   passwordHash     String?
+  /// Legacy default; effective dashboard permissions come from `OrganizationMembership` for the active org.
   role             String  @default("BOARD_MEMBER")
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret  String?
 
-  accounts Account[]
-  sessions Session[]
-  contentAccessLogs ContentAccessLog[]
+  accounts            Account[]
+  sessions            Session[]
+  contentAccessLogs   ContentAccessLog[]
+  organizationMemberships OrganizationMembership[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -62,13 +64,167 @@ model VerificationToken {
 }
 
 model ContentAccessLog {
-  id           String   @id @default(cuid())
-  userId       String?
-  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  resourceType String
-  resourceKey  String
-  href         String?
-  createdAt    DateTime @default(now())
+  id             String   @id @default(cuid())
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organizationId String?
+  resourceType   String
+  resourceKey    String
+  href           String?
+  createdAt      DateTime @default(now())
 
   @@index([userId, createdAt])
+  @@index([organizationId, createdAt])
+}
+
+/// Tenant. Demo/sample orgs set `demoModeEnabled` + `demoProfileKey` to load bundled mock dashboard JSON.
+/// `billingPlan`: future — STARTER | GROWTH | ENTERPRISE
+model Organization {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  missionSnippet   String?
+  logoUrl          String?
+  primaryColor     String   @default("#6b5344")
+  secondaryColor   String   @default("#5c7a7a")
+  accentColor      String?
+  /// When set, `getDashboardProfile(demoProfileKey)` loads mock board data (communityNonprofit, etc.)
+  demoProfileKey   String?
+  demoModeEnabled  Boolean  @default(false)
+  industryType     String?
+  onboardingStatus String   @default("ACTIVE")
+  billingPlan      String?
+
+  settings         OrganizationSettings?
+  modules          OrganizationModule[]
+  memberships      OrganizationMembership[]
+  gcReviews        GcReviewRequest[]
+  expertReviews    ExpertReviewRequest[]
+  routingRules     IssueRoutingRule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Extended org config (theme, domain, landing). Branding colors live on `Organization` for simpler queries.
+model OrganizationSettings {
+  id                 String   @id @default(cuid())
+  organizationId     String   @unique
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  themeMode          String   @default("light")
+  faviconUrl         String?
+  customDomain       String?
+  defaultLandingPage String   @default("/overview")
+  updatedAt          DateTime @updatedAt
+}
+
+model OrganizationModule {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  moduleName     String
+  isEnabled      Boolean      @default(true)
+
+  @@unique([organizationId, moduleName])
+}
+
+model OrganizationMembership {
+  id             String                   @id @default(cuid())
+  organizationId String
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// OWNER | ADMIN | BOARD_CHAIR | BOARD_MEMBER | STAFF | VIEWER (SQLite: store as string)
+  role String @default("VIEWER")
+
+  createdAt DateTime @default(now())
+
+  @@unique([organizationId, userId])
+}
+
+model GcReviewRequest {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  itemType  String
+  itemId    String
+  itemTitle String
+
+  reason           String
+  summaryConcern   String
+  urgency          String
+  relatedDeadline  DateTime?
+  supportingNotes  String?
+
+  flaggedByUserId String?
+  flaggedByEmail  String?
+  flaggedByName   String?
+  flaggedAt       DateTime @default(now())
+
+  status String @default("PENDING")
+
+  reviewNotes       String?
+  recommendation    String?
+  nextStep          String?
+  reviewCompletedAt DateTime?
+  reviewedByUserId  String?
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, itemType, itemId])
+  @@index([organizationId, status])
+  @@index([organizationId, urgency])
+}
+
+/// Per-organization routing destinations for expert review categories.
+model IssueRoutingRule {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category         String
+  displayName      String
+  destinationEmail String       @default("")
+  isActive         Boolean      @default(true)
+  fallbackEmail    String?
+  notes            String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([organizationId, category])
+}
+
+model ExpertReviewRequest {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  category         String
+  subject          String
+  summary          String
+  priority         String
+  deadline         DateTime?
+  additionalNotes  String?
+
+  createdByUserId String?
+  createdByEmail  String?
+  createdByName   String?
+  createdAt       DateTime @default(now())
+
+  relatedItemType  String
+  relatedItemId    String
+  relatedItemTitle String?
+  relatedHref      String?
+
+  organizationName String?
+  destinationEmail   String
+  status             String    @default("SUBMITTED")
+  emailSentAt        DateTime?
+  lastError          String?
+
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, relatedItemType, relatedItemId])
+  @@index([createdByUserId])
 }

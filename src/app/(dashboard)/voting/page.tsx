@@ -15,6 +15,8 @@ import {
   VoteTimelineCard,
 } from "@/components/voting";
 import { InsightCallout } from "@/components/dashboard/InsightCallout";
+import { BoardItemReviewActions } from "@/components/expert-review/BoardItemReviewActions";
+import { RequestReviewToolbar } from "@/components/expert-review/RequestReviewToolbar";
 import {
   votesDecisionsDueSoon,
   votesNeedFollowUp,
@@ -27,7 +29,7 @@ import type { BoardVoteItem } from "@/lib/mock-data/types";
 import { logContentAccess } from "@/lib/audit/clientContentAccess";
 
 export default function VotingPage() {
-  const { profile } = useDemoMode();
+  const { profile, organizationId } = useDemoMode();
   const votes = profile.boardVotes;
 
   const upcoming = useMemo(() => {
@@ -96,7 +98,20 @@ export default function VotingPage() {
                 onClick={() => setSelectedId(v.id)}
                 className="text-left"
               >
-                <VoteItemCard vote={v} />
+                <VoteItemCard
+                  vote={v}
+                  gcReviewFooter={
+                    <BoardItemReviewActions
+                      organizationId={organizationId ?? ""}
+                      gcItemType="vote"
+                      expertItemType="vote"
+                      itemId={v.id}
+                      itemTitle={v.title}
+                      relatedHref="/voting"
+                      compact
+                    />
+                  }
+                />
               </button>
             ))}
           </div>
@@ -113,7 +128,21 @@ export default function VotingPage() {
                 onClick={() => setSelectedId(v.id)}
                 className="text-left"
               >
-                <VoteItemCard vote={v} urgency="closingSoon" />
+                <VoteItemCard
+                  vote={v}
+                  urgency="closingSoon"
+                  gcReviewFooter={
+                    <BoardItemReviewActions
+                      organizationId={organizationId ?? ""}
+                      gcItemType="vote"
+                      expertItemType="vote"
+                      itemId={v.id}
+                      itemTitle={v.title}
+                      relatedHref="/voting"
+                      compact
+                    />
+                  }
+                />
               </button>
             ))}
           </div>
@@ -130,7 +159,20 @@ export default function VotingPage() {
                 onClick={() => setSelectedId(v.id)}
                 className="text-left"
               >
-                <VoteItemCard vote={v} />
+                <VoteItemCard
+                  vote={v}
+                  gcReviewFooter={
+                    <BoardItemReviewActions
+                      organizationId={organizationId ?? ""}
+                      gcItemType="vote"
+                      expertItemType="vote"
+                      itemId={v.id}
+                      itemTitle={v.title}
+                      relatedHref="/voting"
+                      compact
+                    />
+                  }
+                />
               </button>
             ))}
           </div>
@@ -147,7 +189,21 @@ export default function VotingPage() {
                 onClick={() => setSelectedId(v.id)}
                 className="text-left"
               >
-                <VoteItemCard vote={v} urgency="followUp" />
+                <VoteItemCard
+                  vote={v}
+                  urgency="followUp"
+                  gcReviewFooter={
+                    <BoardItemReviewActions
+                      organizationId={organizationId ?? ""}
+                      gcItemType="vote"
+                      expertItemType="vote"
+                      itemId={v.id}
+                      itemTitle={v.title}
+                      relatedHref="/voting"
+                      compact
+                    />
+                  }
+                />
               </button>
             ))}
           </div>
@@ -158,7 +214,19 @@ export default function VotingPage() {
             <h2 className="font-serif text-xl font-semibold text-stone-900">Discussion & coordinator view</h2>
             <p className="text-sm text-stone-600">Selected: {selected.title}</p>
             <div className="grid gap-6 lg:grid-cols-2">
-              <DiscussionThreadCard voteTitle={selected.title} comments={selected.discussionThread} />
+              <DiscussionThreadCard
+                voteTitle={selected.title}
+                comments={selected.discussionThread}
+                footer={
+                  <RequestReviewToolbar
+                    relatedItemType="discussion"
+                    relatedItemId={`discussion-${selected.id}`}
+                    relatedItemTitle={`Discussion: ${selected.title}`}
+                    relatedHref="/voting"
+                    compact
+                  />
+                }
+              />
               <VoteTimelineCard vote={selected} />
             </div>
             <QuestionComposer voteTitle={selected.title} />

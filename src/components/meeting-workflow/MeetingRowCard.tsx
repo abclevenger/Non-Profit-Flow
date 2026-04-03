@@ -1,5 +1,8 @@
-﻿import Link from "next/link";
+﻿"use client";
+
+import Link from "next/link";
 import type { BoardMeeting } from "@/lib/mock-data/types";
+import { logContentAccess } from "@/lib/audit/clientContentAccess";
 import { daysUntilMeeting } from "@/lib/meeting-workflow/meetingWorkflowHelpers";
 import { MeetingLifecyclePill } from "./MeetingLifecyclePill";
 import { MeetingPublicBadge } from "./MeetingPublicBadge";
@@ -12,6 +15,13 @@ export function MeetingRowCard({ meeting }: { meeting: BoardMeeting }) {
   return (
     <Link
       href={`/meetings/${meeting.id}`}
+      onPointerDown={() =>
+        logContentAccess({
+          resourceType: "meeting_list",
+          resourceKey: meeting.id,
+          href: `/meetings/${meeting.id}`,
+        })
+      }
       className="block rounded-2xl border border-stone-200/80 bg-white/60 p-5 shadow-sm ring-1 ring-white/50 backdrop-blur-md transition-shadow hover:shadow-md"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

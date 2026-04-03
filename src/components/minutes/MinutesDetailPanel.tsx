@@ -8,9 +8,11 @@ import { MinutesTimelineCard } from "./MinutesTimelineCard";
 export function MinutesDetailPanel({
   record,
   votes,
+  organizationIdForGc,
 }: {
   record: MeetingMinutesRecord;
   votes: BoardVoteItem[];
+  organizationIdForGc?: string;
 }) {
   const voteLabels = record.linkedVotes
     .map((id) => {
@@ -55,13 +57,13 @@ export function MinutesDetailPanel({
           <section>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Decisions</h3>
             <div className="mt-2">
-              <DecisionSummaryList decisions={record.decisionsMade} />
+              <DecisionSummaryList decisions={record.decisionsMade} organizationIdForGc={organizationIdForGc} />
             </div>
           </section>
           <section>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Follow-up actions</h3>
             <div className="mt-2">
-              <FollowUpActionsList actions={record.followUpActions} />
+              <FollowUpActionsList actions={record.followUpActions} organizationIdForGc={organizationIdForGc} />
             </div>
           </section>
           <section className="grid gap-4 sm:grid-cols-2">

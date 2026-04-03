@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+﻿import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
@@ -7,6 +7,7 @@ import type { NextAuthConfig } from "next-auth";
 import { compare } from "bcryptjs";
 import type { MemberRole } from "@/lib/auth/roles";
 import { isAdminLevelRole, isMemberRole } from "@/lib/auth/roles";
+import { loadOrgSessionState } from "@/lib/auth/sessionOrganizations";
 import { prisma } from "@/lib/prisma";
 import { verifyTotpToken } from "@/lib/auth/totp";
 
@@ -88,16 +89,43 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.sub = user.id;
         const db = await prisma.user.findUnique({ where: { id: user.id } });
         token.role = roleFromDb(db?.role);
+        const orgState = await loadOrgSessionState(user.id, null);
+        token.activeOrganizationId = orgState.activeOrganizationId;
       }
-      if (trigger === "update" && session && typeof session === "object" && "role" in session) {
-        token.role = roleFromDb(session.role as string);
+
+      if (trigger === "update" && session && typeof session === "object") {
+        if ("activeOrganizationId" in session) {
+          const next = session.activeOrganizationId as string | null | undefined;
+          if (next && token.sub) {
+            const ok = await prisma.organizationMembership.findFirst({
+              where: { userId: token.sub, organizationId: next },
+            });
+            if (ok) token.activeOrganizationId = next;
+          }
+        }
+        if ("role" in session) {
+          token.role = roleFromDb(session.role as string);
+        }
       }
+
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub ?? "";
-        session.user.role = roleFromDb(token.role as string);
+      const userId = token.sub ?? "";
+      if (session.user && userId) {
+        const orgState = await loadOrgSessionState(userId, token.activeOrganizationId as string | undefined);
+        session.user.id = userId;
+        session.user.organizations = orgState.organizations;
+        session.user.activeOrganizationId = orgState.activeOrganizationId;
+        session.user.activeOrganization = orgState.activeOrganization;
+        session.user.membershipRole = orgState.membershipRole;
+        session.user.canManageOrganizationSettings = orgState.canManageOrganizationSettings;
+        session.user.canManageIssueRouting = orgState.canManageIssueRouting;
+        session.user.canViewAllExpertReviewsInOrg = orgState.canViewAllExpertReviewsInOrg;
+
+        const legacyRole = roleFromDb(token.role as string);
+        session.user.role =
+          orgState.organizations.length > 0 ? orgState.effectiveMemberRole : legacyRole;
       }
       return session;
     },

@@ -1,6 +1,14 @@
-﻿import type { MinutesDecisionItem } from "@/lib/mock-data/types";
+﻿"use client";
 
-export function DecisionSummaryList({ decisions }: { decisions: MinutesDecisionItem[] }) {
+import { BoardItemReviewActions } from "@/components/expert-review/BoardItemReviewActions";
+import type { MinutesDecisionItem } from "@/lib/mock-data/types";
+export function DecisionSummaryList({
+  decisions,
+  organizationIdForGc,
+}: {
+  decisions: MinutesDecisionItem[];
+  organizationIdForGc?: string;
+}) {
   if (!decisions.length) {
     return <p className="text-sm text-stone-500">No formal decisions recorded yet.</p>;
   }
@@ -11,6 +19,19 @@ export function DecisionSummaryList({ decisions }: { decisions: MinutesDecisionI
           <p className="font-medium text-stone-900">{d.title}</p>
           <p className="mt-1 text-sm text-stone-600">{d.summary}</p>
           <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-stone-500">Outcome: {d.outcome}</p>
+          {organizationIdForGc ? (
+            <div className="mt-3 border-t border-stone-200/70 pt-3">
+              <BoardItemReviewActions
+                organizationId={organizationIdForGc}
+                gcItemType="board_decision"
+                expertItemType="board_decision"
+                itemId={d.id}
+                itemTitle={d.title}
+                relatedHref="/minutes"
+                compact
+              />
+            </div>
+          ) : null}
         </li>
       ))}
     </ul>

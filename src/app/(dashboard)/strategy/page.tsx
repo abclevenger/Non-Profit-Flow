@@ -13,7 +13,7 @@ import {
 } from "@/components/strategy";
 
 export default function StrategyPage() {
-  const { profile } = useDemoMode();
+  const { profile, organizationId } = useDemoMode();
   const strategyInsights = useMemo(() => {
     const all = buildGovernanceInsights(profile);
     return filterInsightsByHrefs(all, new Set(["/strategy"]));
@@ -30,7 +30,11 @@ export default function StrategyPage() {
       <StrategicInsightCallout priorities={profile.strategicPriorities} />
       <section className="space-y-4">
         <h2 className="sr-only">All strategic priorities</h2>
-        <StrategicPriorityList priorities={profile.strategicPriorities} showInlineNote={false} />
+        <StrategicPriorityList
+          priorities={profile.strategicPriorities}
+          showInlineNote={false}
+          organizationIdForGc={organizationId ?? undefined}
+        />
       </section>
       <StrategicNotesPanel priorities={profile.strategicPriorities} />
       {profile.strategicAlignmentNotes ? (

@@ -1,11 +1,14 @@
+import type { ReactNode } from "react";
 import type { DiscussionComment } from "@/lib/mock-data/types";
 
 export function DiscussionThreadCard({
   voteTitle,
   comments,
+  footer,
 }: {
   voteTitle: string;
   comments: DiscussionComment[];
+  footer?: ReactNode;
 }) {
   return (
     <div className="rounded-2xl border border-stone-200/70 bg-white/50 p-4 shadow-sm ring-1 ring-stone-100/80 backdrop-blur-md">
@@ -35,6 +38,7 @@ export function DiscussionThreadCard({
           ))}
         </ul>
       )}
+      {footer ? <div className="mt-4 border-t border-stone-200/80 pt-4">{footer}</div> : null}
     </div>
   );
 }

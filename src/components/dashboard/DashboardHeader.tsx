@@ -1,16 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import type { SampleProfileId } from "@/lib/mock-data/types";
 import { UserSessionMenu } from "@/components/auth/user-session-menu";
-import { ExampleOrgSelector } from "./ExampleOrgSelector";
+import { OrganizationSwitcher } from "./OrganizationSwitcher";
 
 export type DashboardHeaderProps = {
   productName?: string;
   orgName: string;
   reportingPeriod: string;
-  profileId: SampleProfileId;
-  onProfileIdChange: (id: SampleProfileId) => void;
   ctaHref?: string;
 };
 
@@ -18,8 +15,6 @@ export function DashboardHeader({
   productName = "Board Oversight Dashboard",
   orgName,
   reportingPeriod,
-  profileId,
-  onProfileIdChange,
   ctaHref = "https://www.missionimpactlegal.com/contact",
 }: DashboardHeaderProps) {
   return (
@@ -32,7 +27,7 @@ export function DashboardHeader({
               Demo preview
             </span>
             <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-900 ring-1 ring-sky-200/80">
-              Sample Organization
+              Preview
             </span>
           </div>
           <p className="mt-1 text-xs text-stone-500">Preview how this could look for your organization</p>
@@ -41,12 +36,12 @@ export function DashboardHeader({
         </div>
         <div className="flex w-full flex-col gap-3 sm:max-w-xs lg:w-auto lg:min-w-[220px]">
           <UserSessionMenu />
-          <ExampleOrgSelector profileId={profileId} onProfileIdChange={onProfileIdChange} />
+          <OrganizationSwitcher />
           <Link
             href={ctaHref}
             className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-center text-sm font-semibold shadow-sm transition-opacity hover:opacity-90"
             style={{
-              backgroundColor: "var(--demo-accent, #6b5344)",
+              backgroundColor: "var(--accent-color, var(--demo-accent, #6b5344))",
               color: "var(--demo-accent-foreground, #faf8f5)",
             }}
           >

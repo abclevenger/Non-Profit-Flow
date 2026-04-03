@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { ContentProtectionShell, SensitivityBadge } from "@/components/content-protection";
+import { InsightStrip } from "@/components/insights";
 import { InsightCallout } from "@/components/dashboard/InsightCallout";
 import {
   MinutesDetailPanel,
@@ -9,6 +10,7 @@ import {
   MinutesSummaryCards,
 } from "@/components/minutes";
 import { logContentAccess } from "@/lib/audit/clientContentAccess";
+import { buildGovernanceInsights, filterInsightsByHrefs } from "@/lib/insights/governanceInsights";
 import { useDemoMode } from "@/lib/demo-mode-context";
 import {
   minutesByStatus,
@@ -19,10 +21,14 @@ import {
 import { useCallback, useMemo, useState } from "react";
 
 export default function MinutesPage() {
-  const { profile } = useDemoMode();
+  const { profile, organizationId } = useDemoMode();
   const records = profile.meetingMinutes;
   const votes = profile.boardVotes;
   const stats = useMemo(() => minutesSummaryStats(records), [records]);
+  const minutesInsights = useMemo(() => {
+    const all = buildGovernanceInsights(profile);
+    return filterInsightsByHrefs(all, new Set(["/minutes"]));
+  }, [profile]);
 
   const recent = useMemo(() => minutesSortByDateDesc(records).slice(0, 4), [records]);
   const draftReview = useMemo(
@@ -66,6 +72,12 @@ export default function MinutesPage() {
         search by topic — hook into the same MeetingMinutesRecord shape.
       </InsightCallout>
       <MinutesSummaryCards stats={stats} />
+
+      <InsightStrip
+        insights={minutesInsights}
+        title="Minutes & records prompts"
+        description="Governance nudges tied to approval workflow in this demo profile."
+      />
 
       <ContentProtectionShell
         blockContextMenu
@@ -111,7 +123,7 @@ export default function MinutesPage() {
       {selected ? (
         <section className="space-y-3">
           <h2 className="font-serif text-xl font-semibold text-stone-900">Selected record</h2>
-          <MinutesDetailPanel record={selected} votes={votes} />
+          <MinutesDetailPanel record={selected} votes={votes} organizationIdForGc={organizationId ?? undefined} />
         </section>
       ) : null}
       </ContentProtectionShell>

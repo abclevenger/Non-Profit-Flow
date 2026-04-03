@@ -2,6 +2,25 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
+const LIST_LIMIT = 200;
+
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const items = await prisma.contentAccessLog.findMany({
+    orderBy: { createdAt: "desc" },
+    take: LIST_LIMIT,
+    include: {
+      user: { select: { email: true, name: true } },
+    },
+  });
+
+  return NextResponse.json({ items });
+}
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {

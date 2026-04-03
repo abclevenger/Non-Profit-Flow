@@ -1,6 +1,23 @@
 @import "tailwindcss";
 
+/*
+  White-label tokens (dashboard shell sets these inline per organization):
+  --primary-color, --secondary-color, --accent-color
+  --brand-primary, --brand-secondary, --demo-accent, --demo-sidebar-bg, --demo-border
+  --link-color, --link-hover-color
+  Light surfaces: --surface-page, --surface-elevated, --text-primary, --text-muted
+  Root element uses data-theme="light" today; dark mode can override the same tokens via [data-theme="dark"].
+*/
+
 @theme inline {
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-cormorant), ui-serif, Georgia, "Times New Roman", serif;
+}
+
+/* Reserved for dark mode — toggle data-theme on <html> or shell when implemented */
+[data-theme="dark"] {
+  /* --surface-page: #0c0a09;
+  --surface-elevated: #1c1917;
+  --text-primary: #fafaf9;
+  --text-muted: #a8a29e; */
 }

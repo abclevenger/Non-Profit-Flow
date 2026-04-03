@@ -201,6 +201,8 @@ export interface DocumentItem {
   lastUpdated: string;
   href: string;
   category: "packet" | "minutes" | "resolution" | "approval" | "other";
+  /** When false, UI hides active download affordance (demo policy flag). */
+  downloadAllowed?: boolean;
 }
 
 /** Module completion for orientation — drives CompletionStatusPill */

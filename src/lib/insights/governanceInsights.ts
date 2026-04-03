@@ -1,4 +1,5 @@
 import type { OrganizationProfile } from "@/lib/mock-data/types";
+import { upcomingMeetings } from "@/lib/meeting-workflow/meetingWorkflowHelpers";
 import type { GovernanceInsight } from "./types";
 
 const severityOrder: Record<GovernanceInsight["severity"], number> = {
@@ -96,6 +97,70 @@ export function buildGovernanceInsights(profile: OrganizationProfile): Governanc
       title: "Compliance calendar items to watch",
       detail: `${dueSoon.length} upcoming filing or renewal — confirm board packet coverage.`,
       href: "/governance",
+    });
+  }
+
+  const requiredMods = profile.boardTraining.modules.filter((m) => m.required);
+  const incompleteRequired = requiredMods.filter((m) => m.status !== "Complete");
+  if (incompleteRequired.length > 0) {
+    insights.push({
+      id: "training-required-open",
+      severity: "info",
+      title: "Required orientation topics still open",
+      detail: `${incompleteRequired.length} required module(s) are not marked complete in this demo — align onboarding before major decisions.`,
+      href: "/training",
+    });
+  }
+
+  const risks = profile.risks;
+  const highRisks = risks.filter((r) => r.status === "High");
+  if (highRisks.length > 0) {
+    insights.push({
+      id: "risk-high",
+      severity: "risk",
+      title: "High-severity risk on the board map",
+      detail: `${highRisks.length} area(s) marked High — review owners, mitigations, and what the board should monitor between meetings.`,
+      href: "/risks",
+    });
+  }
+
+  const risingRisks = risks.filter((r) => r.trend === "rising");
+  if (risingRisks.length > 0) {
+    insights.push({
+      id: "risk-rising",
+      severity: "attention",
+      title: "Risk area(s) trending up",
+      detail: `${risingRisks.length} topic(s) flagged as rising — worth a focused discussion or deeper briefing.`,
+      href: "/risks",
+    });
+  }
+
+  const mediumRisks = risks.filter((r) => r.status === "Medium");
+  const watchlisted = risks.filter((r) => r.watchlist);
+  if (
+    highRisks.length === 0 &&
+    (mediumRisks.length >= 2 || watchlisted.length >= 2 || (mediumRisks.length >= 1 && watchlisted.length >= 1))
+  ) {
+    insights.push({
+      id: "risk-multiple-focus",
+      severity: "info",
+      title: "Several board risk themes need alignment",
+      detail:
+        mediumRisks.length >= 2
+          ? `${mediumRisks.length} categories are Medium — use the risk view to prioritize board time and owners.`
+          : "Multiple watchlist or medium items deserve a shared read before major commitments.",
+      href: "/risks",
+    });
+  }
+
+  const upcomingMeet = upcomingMeetings(profile.boardMeetings);
+  if (upcomingMeet.length > 0) {
+    insights.push({
+      id: "meetings-upcoming",
+      severity: "info",
+      title: "Meeting workflow has upcoming sessions",
+      detail: `${upcomingMeet.length} meeting(s) scheduled or in progress — agenda, votes, and discussion are linked in one place.`,
+      href: "/meetings",
     });
   }
 

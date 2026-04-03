@@ -1,3 +1,4 @@
+import { BoardItemReviewActions } from "@/components/expert-review/BoardItemReviewActions";
 import type { StrategicPriority } from "@/lib/mock-data/types";
 import { StrategicPriorityCard } from "./StrategicPriorityCard";
 
@@ -6,12 +7,14 @@ export type StrategicPriorityListProps = {
   compact?: boolean;
   /** Pass false on strategy page when using StrategicNotesPanel */
   showInlineNote?: boolean;
+  organizationIdForGc?: string;
 };
 
 export function StrategicPriorityList({
   priorities,
   compact,
   showInlineNote = true,
+  organizationIdForGc,
 }: StrategicPriorityListProps) {
   const hasCategories = priorities.some((p) => p.category);
 
@@ -24,6 +27,19 @@ export function StrategicPriorityList({
             priority={p}
             compact={compact}
             showInlineNote={showInlineNote}
+            gcReviewSlot={
+              organizationIdForGc ? (
+                <BoardItemReviewActions
+                  organizationId={organizationIdForGc}
+                  gcItemType="policy"
+                  expertItemType="policy"
+                  itemId={p.id}
+                  itemTitle={p.title}
+                  relatedHref="/strategy"
+                  compact
+                />
+              ) : undefined
+            }
           />
         ))}
       </div>
@@ -49,6 +65,19 @@ export function StrategicPriorityList({
                 priority={p}
                 compact={compact}
                 showInlineNote={showInlineNote}
+                gcReviewSlot={
+                  organizationIdForGc ? (
+                    <BoardItemReviewActions
+                      organizationId={organizationIdForGc}
+                      gcItemType="policy"
+                      expertItemType="policy"
+                      itemId={p.id}
+                      itemTitle={p.title}
+                      relatedHref="/strategy"
+                      compact
+                    />
+                  ) : undefined
+                }
               />
             ))}
           </div>

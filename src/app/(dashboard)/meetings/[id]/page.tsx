@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { ActionTrackerTable } from "@/components/dashboard/ActionTrackerTable";
 import { InsightCallout } from "@/components/dashboard/InsightCallout";
 import {
   MeetingLifecyclePill,
   MeetingPublicBadge,
   MeetingTypeLabel,
-  WorkflowAgendaList,
 } from "@/components/meeting-workflow";
+import { BoardItemReviewActions } from "@/components/expert-review/BoardItemReviewActions";
+import { WorkflowAgendaWithGc } from "@/components/gc-review/WorkflowAgendaWithGc";
 import { MinutesTimelineCard } from "@/components/minutes";
 import { DiscussionThreadCard, VoteItemCard } from "@/components/voting";
 import { ContentProtectionShell, SensitivityBadge } from "@/components/content-protection";
+import { canAccessVotingWorkspace } from "@/lib/auth/permissions";
+import { isMemberRole } from "@/lib/auth/roles";
 import { useDemoMode } from "@/lib/demo-mode-context";
 import { logContentAccess } from "@/lib/audit/clientContentAccess";
 import { actionsForMeeting, votesForMeeting } from "@/lib/meeting-workflow/meetingWorkflowHelpers";
@@ -21,7 +25,13 @@ import { useEffect, useMemo, useRef } from "react";
 export default function MeetingDetailPage() {
   const params = useParams();
   const id = typeof params.id === "string" ? params.id : params.id?.[0] ?? "";
-  const { profile } = useDemoMode();
+  const { profile, organizationId } = useDemoMode();
+  const { data: session, status } = useSession();
+  const canOpenVoting = useMemo(() => {
+    if (status !== "authenticated" || !session?.user?.role) return false;
+    const r = session.user.role;
+    return isMemberRole(r) && canAccessVotingWorkspace(r);
+  }, [session?.user?.role, status]);
 
   const meeting = useMemo(() => profile.boardMeetings.find((m) => m.id === id), [profile.boardMeetings, id]);
   const votes = profile.boardVotes;
@@ -97,7 +107,7 @@ export default function MeetingDetailPage() {
       <section className="space-y-3">
         <h2 className="font-serif text-xl font-semibold text-stone-900">Agenda</h2>
         <p className="text-sm text-stone-600">Informational items and decisions tied to votes.</p>
-        <WorkflowAgendaList items={meeting.agendaItems} />
+        <WorkflowAgendaWithGc items={meeting.agendaItems} organizationId={organizationId ?? ""} meetingHref={`/meetings/${id}`} />
       </section>
 
       <section className="space-y-3">
@@ -105,14 +115,34 @@ export default function MeetingDetailPage() {
         <p className="text-sm text-stone-600">Inherited meeting context - same items appear in Voting.</p>
         <div className="grid gap-4 md:grid-cols-2">
           {meetingVotes.length ? (
-            meetingVotes.map((v) => <VoteItemCard key={v.id} vote={v} />)
+            meetingVotes.map((v) => (
+              <VoteItemCard
+                key={v.id}
+                vote={v}
+                gcReviewFooter={
+                  <BoardItemReviewActions
+                    organizationId={organizationId ?? ""}
+                    gcItemType="vote"
+                    expertItemType="vote"
+                    itemId={v.id}
+                    itemTitle={v.title}
+                    relatedHref={`/meetings/${id}`}
+                    compact
+                  />
+                }
+              />
+            ))
           ) : (
             <p className="text-sm text-stone-500">No votes linked to this meeting.</p>
           )}
         </div>
-        <Link href="/voting" className="text-sm font-semibold text-stone-800 underline-offset-4 hover:underline">
-          Open voting workspace
-        </Link>
+        {canOpenVoting ? (
+          <Link href="/voting" className="text-sm font-semibold text-stone-800 underline-offset-4 hover:underline">
+            Open voting workspace
+          </Link>
+        ) : (
+          <p className="text-sm text-stone-500">Voting workspace requires a board, committee, or leadership role in this demo.</p>
+        )}
       </section>
 
       <section className="space-y-4">
@@ -160,7 +190,7 @@ export default function MeetingDetailPage() {
         <h2 className="font-serif text-xl font-semibold text-stone-900">Follow-up actions</h2>
         <p className="text-sm text-stone-600">From the meeting action id list.</p>
         {linkedActions.length ? (
-          <ActionTrackerTable items={linkedActions} />
+          <ActionTrackerTable items={linkedActions} organizationIdForGc={organizationId ?? undefined} />
         ) : (
           <p className="text-sm text-stone-500">No actions tied to this meeting in demo data.</p>
         )}

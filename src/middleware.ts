@@ -1,7 +1,13 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { canAccessVotingWorkspace } from "@/lib/auth/permissions";
+import { isMemberRole, type MemberRole } from "@/lib/auth/roles";
 import { updateSession } from "@/utils/supabase/middleware";
+
+function roleFromToken(role: unknown): MemberRole {
+  return typeof role === "string" && isMemberRole(role) ? role : "GUEST";
+}
 
 function copyCookies(from: NextResponse, to: NextResponse) {
   from.cookies.getAll().forEach(({ name, value }) => {
@@ -32,6 +38,29 @@ export async function middleware(req: NextRequest) {
     copyCookies(supabaseResponse, redirect);
     return redirect;
   }
+
+  const role = roleFromToken(token.role);
+
+  if (pathname.startsWith("/admin")) {
+    if (role !== "ADMIN") {
+      const denied = new URL("/forbidden", req.nextUrl.origin);
+      denied.searchParams.set("reason", "admin");
+      const redirect = NextResponse.redirect(denied);
+      copyCookies(supabaseResponse, redirect);
+      return redirect;
+    }
+  }
+
+  if (pathname === "/voting" || pathname.startsWith("/voting/")) {
+    if (!canAccessVotingWorkspace(role)) {
+      const denied = new URL("/forbidden", req.nextUrl.origin);
+      denied.searchParams.set("reason", "vote");
+      const redirect = NextResponse.redirect(denied);
+      copyCookies(supabaseResponse, redirect);
+      return redirect;
+    }
+  }
+
   return supabaseResponse;
 }
 

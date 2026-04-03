@@ -6,7 +6,7 @@ import { DocumentListCard } from "@/components/dashboard/DocumentListCard";
 import { SectionHeader } from "@/components/dashboard/SectionHeader";
 
 export default function DocumentsPage() {
-  const { profile } = useDemoMode();
+  const { profile, organizationId } = useDemoMode();
 
   return (
     <ContentProtectionShell blockContextMenu restrictSelection showViewOnlyHint>
@@ -18,10 +18,34 @@ export default function DocumentsPage() {
           />
           <SensitivityBadge variant="confidential" />
         </div>
-        <DocumentListCard title="Board packets" documents={profile.documents} filter={["packet"]} logAccess />
-        <DocumentListCard title="Meeting minutes" documents={profile.documents} filter={["minutes"]} logAccess />
-        <DocumentListCard title="Resolutions" documents={profile.documents} filter={["resolution"]} logAccess />
-        <DocumentListCard title="Upcoming approvals" documents={profile.documents} filter={["approval"]} logAccess />
+        <DocumentListCard
+          title="Board packets"
+          documents={profile.documents}
+          filter={["packet"]}
+          logAccess
+          organizationIdForGc={organizationId ?? undefined}
+        />
+        <DocumentListCard
+          title="Meeting minutes"
+          documents={profile.documents}
+          filter={["minutes"]}
+          logAccess
+          organizationIdForGc={organizationId ?? undefined}
+        />
+        <DocumentListCard
+          title="Resolutions"
+          documents={profile.documents}
+          filter={["resolution"]}
+          logAccess
+          organizationIdForGc={organizationId ?? undefined}
+        />
+        <DocumentListCard
+          title="Upcoming approvals"
+          documents={profile.documents}
+          filter={["approval"]}
+          logAccess
+          organizationIdForGc={organizationId ?? undefined}
+        />
       </div>
     </ContentProtectionShell>
   );

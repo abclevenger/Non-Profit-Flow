@@ -29,7 +29,7 @@ npm start       # run production server
 |------|--------|
 | [`src/app/layout.tsx`](src/app/layout.tsx) | Root layout, fonts, page metadata |
 | [`src/app/page.tsx`](src/app/page.tsx) | Public landing + links to sign-in |
-| [`src/app/(dashboard)/layout.tsx`](src/app/(dashboard)/layout.tsx) | Demo mode provider + dashboard shell (sidebar + header) |
+| [`src/app/(dashboard)/layout.tsx`](src/app/(dashboard)/layout.tsx) | Workspace + branding providers + dashboard shell (sidebar + header) |
 | [`src/app/(dashboard)/overview/page.tsx`](src/app/(dashboard)/overview/page.tsx) | Board overview (main demo) |
 | [`src/app/(dashboard)/strategy/page.tsx`](src/app/(dashboard)/strategy/page.tsx) | **Strategic Planning** Ã¢â‚¬â€ full priority workspace (`/strategy`) |
 | [`src/app/(dashboard)/governance/page.tsx`](src/app/(dashboard)/governance/page.tsx) | Governance & compliance calendar |
@@ -52,7 +52,8 @@ npm start       # run production server
 | [`src/lib/mock-data/`](src/lib/mock-data/) | **Central mock data** Ã¢â‚¬â€ start here to customize |
 | [`src/components/dashboard/`](src/components/dashboard/) | Reusable dashboard UI modules |
 | [`src/components/strategy/`](src/components/strategy/) | **Strategic Planning** module (cards, insight callout, notes panel) |
-| [`src/lib/demo-mode-context.tsx`](src/lib/demo-mode-context.tsx) | Client state for Generic vs Customized (persisted in `localStorage`) |
+| [`src/lib/demo-mode-context.tsx`](src/lib/demo-mode-context.tsx) | Re-exports workspace context (`WorkspaceProvider`, `useWorkspace`; legacy `DemoModeProvider` alias) |
+| [`docs/ORGANIZATIONS.md`](docs/ORGANIZATIONS.md) | **Multi-organization** model, memberships, modules, and APIs |
 
 The `(dashboard)` segment is only for grouping; URLs stay **`/overview`**, **`/strategy`**, etc.
 
@@ -112,15 +113,14 @@ The `(dashboard)` segment is only for grouping; URLs stay **`/overview`**, **`/s
 4. **Wire a third profile (optional)**  
    - Add `src/lib/mock-data/yourClientPreview.ts` exporting an `OrganizationProfile`.  
    - Extend `DemoMode` in `types.ts` and branch in [`src/lib/mock-data/dashboardData.ts`](src/lib/mock-data/dashboardData.ts).  
-   - Extend [`ExampleOrgSelector`](src/components/dashboard/ExampleOrgSelector.tsx), [`SAMPLE_PROFILE_OPTIONS`](src/lib/mock-data/dashboardData.ts), and [`demo-mode-context`](src/lib/demo-mode-context.tsx) if you add a fourth archetype.
+   - Add a seeded `Organization` with `demoProfileKey` and memberships (see [`docs/ORGANIZATIONS.md`](docs/ORGANIZATIONS.md)); register the profile in [`dashboardData.ts`](src/lib/mock-data/dashboardData.ts).
 
 5. **Planning call button**  
    The header CTA URL is set in [`DashboardHeader.tsx`](src/components/dashboard/DashboardHeader.tsx) (`ctaHref`). Point it to your real scheduling link.
 
-## Example organizations (header)
+## Organizations (header)
 
-- Use **View example organization** in the header to switch profiles.  
-- Choice is stored in **`localStorage`** under key `board-oversight-sample-profile`. Legacy key `board-oversight-demo-mode` (`generic` / `customized`) maps to the first two archetypes for existing browsers.
+- Use **Organization** in the header to switch tenants you belong to (session-backed; no full reload). Sample/demo orgs are real `Organization` rows tied to mock JSON via `demoProfileKey` — see [`docs/ORGANIZATIONS.md`](docs/ORGANIZATIONS.md).
 
 ## Code comments
 

@@ -9,9 +9,10 @@ import { EmptyStateNote } from "@/components/dashboard/EmptyStateNote";
 import { GovernanceHealthCard } from "@/components/dashboard/GovernanceHealthCard";
 import { InsightCallout } from "@/components/dashboard/InsightCallout";
 import { SectionHeader } from "@/components/dashboard/SectionHeader";
+import { BoardItemReviewActions } from "@/components/expert-review/BoardItemReviewActions";
 
 export default function GovernancePage() {
-  const { profile } = useDemoMode();
+  const { profile, organizationId } = useDemoMode();
   const governanceInsights = useMemo(() => {
     const all = buildGovernanceInsights(profile);
     return filterInsightsByHrefs(all, new Set(["/governance"]));
@@ -43,13 +44,22 @@ export default function GovernancePage() {
           </div>
           {profile.complianceCalendar?.length ? (
             <ul className="mt-4 divide-y divide-stone-200/80">
-              {profile.complianceCalendar.map((row) => (
-                <li key={row.label} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
+              {profile.complianceCalendar.map((row, i) => (
+                <li key={row.label} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-stone-900">{row.label}</p>
                     <p className="text-sm text-stone-600">{row.date}</p>
+                    <p className="mt-1 text-sm font-medium text-stone-700">{row.status}</p>
+                    <BoardItemReviewActions
+                      organizationId={organizationId ?? ""}
+                      gcItemType="compliance"
+                      expertItemType="compliance"
+                      itemId={`compliance-${i}`}
+                      itemTitle={row.label}
+                      relatedHref="/governance"
+                      compact
+                    />
                   </div>
-                  <p className="text-sm font-medium text-stone-700">{row.status}</p>
                 </li>
               ))}
             </ul>

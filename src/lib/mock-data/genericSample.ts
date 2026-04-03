@@ -139,7 +139,14 @@ export const genericSample: OrganizationProfile = {
     { label: "Board training (orientation + ethics)", status: "92% complete", detail: "2 members finishing module by Apr 30" },
   ],
   documents: [
-    { title: "April 2026 board packet (draft)", type: "Board packet", lastUpdated: "Apr 12, 2026", href: "#", category: "packet" },
+    {
+      title: "April 2026 board packet (draft)",
+      type: "Board packet",
+      lastUpdated: "Apr 12, 2026",
+      href: "#",
+      category: "packet",
+      downloadAllowed: false,
+    },
     { title: "March 2026 meeting minutes", type: "Minutes", lastUpdated: "Apr 2, 2026", href: "#", category: "minutes" },
     { title: "Resolution: FY26 signing authority", type: "Resolution", lastUpdated: "Mar 18, 2026", href: "#", category: "resolution" },
     { title: "Upcoming approval: facilities MOU", type: "Approval", lastUpdated: "Apr 8, 2026", href: "#", category: "approval" },

@@ -1,9 +1,11 @@
 ﻿"use client";
 
+import { InsightStrip } from "@/components/insights";
 import { InsightCallout } from "@/components/dashboard/InsightCallout";
 import { SectionHeader } from "@/components/dashboard/SectionHeader";
 import { MeetingRowCard, SimpleMeetingCalendar } from "@/components/meeting-workflow";
 import { useDemoMode } from "@/lib/demo-mode-context";
+import { buildGovernanceInsights, filterInsightsByHrefs } from "@/lib/insights/governanceInsights";
 import { pastMeetings, upcomingMeetings } from "@/lib/meeting-workflow/meetingWorkflowHelpers";
 import { useMemo, useState } from "react";
 
@@ -13,6 +15,10 @@ export default function MeetingsPage() {
   const upcoming = useMemo(() => upcomingMeetings(meetings), [meetings]);
   const past = useMemo(() => pastMeetings(meetings), [meetings]);
   const [view, setView] = useState<"list" | "calendar">("list");
+  const meetingInsights = useMemo(() => {
+    const all = buildGovernanceInsights(profile);
+    return filterInsightsByHrefs(all, new Set(["/meetings"]));
+  }, [profile]);
 
   const calAnchor = useMemo(() => {
     const m = upcoming[0] ?? past[0];
@@ -26,6 +32,12 @@ export default function MeetingsPage() {
       <SectionHeader
         title="Meeting workflow"
         description="One connected path from calendar to agenda, votes, minutes, and follow-up — a board command center, not a generic scheduler."
+      />
+
+      <InsightStrip
+        insights={meetingInsights}
+        title="Meeting cycle prompts"
+        description="Cross-links from governance insights when this profile has upcoming sessions."
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

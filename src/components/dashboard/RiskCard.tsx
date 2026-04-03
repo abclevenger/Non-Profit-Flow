@@ -1,9 +1,12 @@
+import type { ReactNode } from "react";
 import type { RiskItem } from "@/lib/mock-data/types";
 import { StatusPill } from "./StatusPill";
 
-export type RiskCardProps = RiskItem;
+export type RiskCardProps = RiskItem & {
+  gcReviewFooter?: ReactNode;
+};
 
-export function RiskCard({ category, status, summary, owner, watchlist, trend }: RiskCardProps) {
+export function RiskCard({ category, status, summary, owner, watchlist, trend, gcReviewFooter }: RiskCardProps) {
   return (
     <article className="rounded-xl border border-stone-200/90 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -22,6 +25,7 @@ export function RiskCard({ category, status, summary, owner, watchlist, trend }:
           </span>
         ) : null}
       </div>
+      {gcReviewFooter ? <div className="mt-4 border-t border-stone-200/80 pt-4">{gcReviewFooter}</div> : null}
     </article>
   );
 }

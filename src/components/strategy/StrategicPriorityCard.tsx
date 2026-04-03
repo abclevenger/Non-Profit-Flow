@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { StrategicPriority } from "@/lib/mock-data/types";
 import { StatusPill } from "@/components/dashboard/StatusPill";
 
@@ -10,9 +10,16 @@ export type StrategicPriorityCardProps = {
   compact?: boolean;
   /** When false, notes appear only in StrategicNotesPanel (strategy page) */
   showInlineNote?: boolean;
+  /** Optional General Counsel flag row (parent supplies toolbar). */
+  gcReviewSlot?: ReactNode;
 };
 
-export function StrategicPriorityCard({ priority, compact, showInlineNote = true }: StrategicPriorityCardProps) {
+export function StrategicPriorityCard({
+  priority,
+  compact,
+  showInlineNote = true,
+  gcReviewSlot,
+}: StrategicPriorityCardProps) {
   const [open, setOpen] = useState(false);
   const p = priority;
 
@@ -42,6 +49,7 @@ export function StrategicPriorityCard({ priority, compact, showInlineNote = true
           <span className="font-medium text-stone-600">Next milestone: </span>
           {p.nextMilestone}
         </p>
+        {gcReviewSlot ? <div className="mt-3 border-t border-stone-200/80 pt-3">{gcReviewSlot}</div> : null}
       </article>
     );
   }
@@ -125,6 +133,7 @@ export function StrategicPriorityCard({ priority, compact, showInlineNote = true
           )}
         </div>
       ) : null}
+      {gcReviewSlot ? <div className="mt-4 border-t border-stone-200/80 pt-4">{gcReviewSlot}</div> : null}
     </article>
   );
 }

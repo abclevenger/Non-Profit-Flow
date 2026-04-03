@@ -1,12 +1,21 @@
-import type { BoardAgenda } from "@/lib/mock-data/types";
+"use client";
 
+import { BoardItemReviewActions } from "@/components/expert-review/BoardItemReviewActions";
+import type { BoardAgenda } from "@/lib/mock-data/types";
 function itemsByKind(agenda: BoardAgenda, kind: BoardAgenda["items"][number]["kind"]) {
   return agenda.items.filter((i) => i.kind === kind).map((i) => i.title);
 }
 
-export type AgendaCardProps = { agenda: BoardAgenda };
+function agendaItemId(title: string) {
+  return `agenda-board-${encodeURIComponent(title).slice(0, 160)}`;
+}
 
-export function AgendaCard({ agenda }: AgendaCardProps) {
+export type AgendaCardProps = {
+  agenda: BoardAgenda;
+  organizationIdForGc?: string;
+};
+
+export function AgendaCard({ agenda, organizationIdForGc }: AgendaCardProps) {
   const decisions = itemsByKind(agenda, "decision");
   const discussion = itemsByKind(agenda, "discussion");
   const approvals = itemsByKind(agenda, "approval");
@@ -14,24 +23,30 @@ export function AgendaCard({ agenda }: AgendaCardProps) {
 
   return (
     <div className="rounded-xl border border-stone-200/90 bg-white p-5 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
-        Next board meeting
-      </p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Next board meeting</p>
       <p className="mt-1 font-serif text-lg font-semibold text-stone-900">{agenda.nextMeetingDate}</p>
-      {agenda.meetingLabel ? (
-        <p className="mt-1 text-sm text-stone-600">{agenda.meetingLabel}</p>
-      ) : null}
+      {agenda.meetingLabel ? <p className="mt-1 text-sm text-stone-600">{agenda.meetingLabel}</p> : null}
 
       <div className="mt-5 space-y-4">
         <div>
           <h4 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Agenda items</h4>
-          <ul className="mt-2 space-y-2 text-sm text-stone-700">
+          <ul className="mt-2 space-y-3 text-sm text-stone-700">
             {agenda.items.map((item) => (
-              <li
-                key={item.title}
-                className="rounded-lg bg-stone-50/80 px-3 py-2 ring-1 ring-stone-200/60"
-              >
-                {item.title}
+              <li key={item.title} className="rounded-lg bg-stone-50/80 px-3 py-2 ring-1 ring-stone-200/60">
+                <p>{item.title}</p>
+                {organizationIdForGc ? (
+                  <div className="mt-2 border-t border-stone-200/70 pt-2">
+                    <BoardItemReviewActions
+                      organizationId={organizationIdForGc}
+                      gcItemType="agenda"
+                      expertItemType="agenda"
+                      itemId={agendaItemId(item.title)}
+                      itemTitle={item.title}
+                      relatedHref="/overview"
+                      compact
+                    />
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -43,9 +58,7 @@ export function AgendaCard({ agenda }: AgendaCardProps) {
         </div>
         {general.length ? (
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-stone-500">
-              Other items
-            </h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Other items</h4>
             <ul className="mt-2 list-inside list-disc text-sm text-stone-700">
               {general.map((g) => (
                 <li key={g}>{g}</li>
