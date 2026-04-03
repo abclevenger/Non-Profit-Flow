@@ -1,0 +1,743 @@
+{
+  "community": {
+    "welcomeTitle": "New Board Member Orientation",
+    "welcomeLead": "Start here for a clear picture of who we serve, how the board helps, and what to expect in your first weeks.",
+    "missionSnapshot": "We strengthen neighborhoods through programs and partnerships. The board keeps mission and community trust at the center while supporting staff who run day-to-day operations.",
+    "progress": {
+      "percentComplete": 42,
+      "completedCount": 3,
+      "remainingCount": 4,
+      "lastViewedDate": "Apr 1, 2026",
+      "documentsReviewed": 3,
+      "documentsTotal": 6
+    },
+    "orientationTimeline": [
+      {
+        "id": "ot-c1",
+        "weekLabel": "Week 1",
+        "title": "Organization overview",
+        "summary": "Mission, leadership, and how programs reach families. Skim the handbook and bylaws index."
+      },
+      {
+        "id": "ot-c2",
+        "weekLabel": "Week 2",
+        "title": "Governance basics",
+        "summary": "Fiduciary role, committees, and how the board partners with the executive director."
+      },
+      {
+        "id": "ot-c3",
+        "weekLabel": "Week 3",
+        "title": "Policies and meetings",
+        "summary": "Expectations, conflicts of interest, and how packets and votes work before your first full meeting."
+      }
+    ],
+    "governanceBasics": [
+      {
+        "id": "gb-c1",
+        "heading": "Fiduciary duties",
+        "body": "Act in the organizations best interest, stay informed, and ask questions when something is unclear."
+      },
+      {
+        "id": "gb-c2",
+        "heading": "Board vs staff",
+        "body": "The board sets direction, approves major decisions, and oversees health and compliance."
+      },
+      {
+        "id": "gb-c3",
+        "heading": "Oversight",
+        "body": "You review finances, major risks, and executive performance through a governance lens."
+      },
+      {
+        "id": "gb-c4",
+        "heading": "Meetings",
+        "body": "Read the packet ahead of time, join committees you care about, and share context from the community you represent."
+      }
+    ],
+    "quickAnswers": [
+      {
+        "id": "qa-c1",
+        "question": "What is the board responsible for?",
+        "answer": "Mission, strategy, financial health, executive oversight, and governance policies."
+      },
+      {
+        "id": "qa-c2",
+        "question": "Where do I find meeting materials?",
+        "answer": "Board packets are shared before each meeting. Orientation PDFs live under Resources below."
+      },
+      {
+        "id": "qa-c3",
+        "question": "How are votes handled?",
+        "answer": "Most formal votes happen in meetings after discussion. The Voting area shows timing when used."
+      },
+      {
+        "id": "qa-c4",
+        "question": "Who do I contact with questions?",
+        "answer": "Start with the board chair or governance committee lead."
+      }
+    ],
+    "resources": [
+      {
+        "id": "tr-c-handbook",
+        "title": "Board handbook",
+        "type": "handbook",
+        "description": "Roles, meeting norms, and how to stay engaged between meetings.",
+        "lastUpdated": "Mar 10, 2026",
+        "href": "#",
+        "recommended": true
+      },
+      {
+        "id": "tr-c-bylaws",
+        "title": "Bylaws",
+        "type": "bylaws",
+        "description": "Legal structure: officers, meetings, and amendment process.",
+        "lastUpdated": "Jan 5, 2026",
+        "href": "#"
+      },
+      {
+        "id": "tr-c-coi",
+        "title": "Conflict of interest policy",
+        "type": "policy",
+        "description": "When to disclose and how the board manages conflicts.",
+        "lastUpdated": "Feb 2, 2026",
+        "href": "#"
+      },
+      {
+        "id": "tr-c-plan",
+        "title": "Strategic plan (summary)",
+        "type": "plan",
+        "description": "Three-year priorities and how programs connect to the mission.",
+        "lastUpdated": "Dec 1, 2025",
+        "href": "#"
+      },
+      {
+        "id": "tr-c-packet",
+        "title": "Recent board packet",
+        "type": "packet",
+        "description": "Latest agenda, reports, and materials for the upcoming meeting.",
+        "lastUpdated": "Apr 12, 2026",
+        "href": "#",
+        "recommended": true
+      },
+      {
+        "id": "tr-c-orient",
+        "title": "Orientation packet (PDF)",
+        "type": "orientation",
+        "description": "Printable welcome packet for new members.",
+        "lastUpdated": "Mar 28, 2026",
+        "href": "#"
+      }
+    ],
+    "modules": [
+      {
+        "id": "tm-c-welcome",
+        "title": "Welcome to the organization",
+        "summary": "Mission, leadership, and current priorities in plain language.",
+        "required": true,
+        "estimatedTime": "20 min",
+        "status": "Complete",
+        "category": "Welcome",
+        "content": [
+          "You will see how we describe our work to neighbors, partners, and donors.",
+          "Meet the leadership team and how committees connect to programs you care about."
+        ],
+        "linkedResources": [
+          "tr-c-handbook",
+          "tr-c-plan"
+        ]
+      },
+      {
+        "id": "tm-c-role",
+        "title": "Your role as a board member",
+        "summary": "What the board does, what it does not do, and how volunteers fit in here.",
+        "required": true,
+        "estimatedTime": "25 min",
+        "status": "Complete",
+        "category": "Your role",
+        "content": [
+          "In a volunteer-heavy organization, clarity between governance and operations matters.",
+          "Recruitment and onboarding are board-led."
+        ],
+        "linkedResources": [
+          "tr-c-handbook"
+        ]
+      },
+      {
+        "id": "tm-c-gov",
+        "title": "Governance basics",
+        "summary": "Fiduciary duties, oversight, and working with the executive director.",
+        "required": true,
+        "estimatedTime": "30 min",
+        "status": "In Progress",
+        "category": "Governance basics",
+        "content": [
+          "Focus on the big picture: finances, risk, and mission alignment.",
+          "Ask for what you need to feel prepared."
+        ],
+        "linkedResources": [
+          "tr-c-bylaws",
+          "tr-c-coi"
+        ]
+      },
+      {
+        "id": "tm-c-policies",
+        "title": "Key policies and expectations",
+        "summary": "Conduct, confidentiality, and conflict standards in everyday terms.",
+        "required": true,
+        "estimatedTime": "25 min",
+        "status": "Not Started",
+        "category": "Policies",
+        "content": [
+          "Policies protect the organization and the people we serve.",
+          "You will know when to step back from a decision where you have a personal interest."
+        ],
+        "linkedResources": [
+          "tr-c-coi",
+          "tr-c-handbook"
+        ]
+      },
+      {
+        "id": "tm-c-meetings",
+        "title": "Board meetings and decisions",
+        "summary": "Packets, agendas, discussion, and how decisions get recorded.",
+        "required": true,
+        "estimatedTime": "20 min",
+        "status": "Not Started",
+        "category": "Meetings",
+        "content": [
+          "We value discussion before votes; consent agendas handle routine items.",
+          "Minutes capture decisions, not every comment."
+        ],
+        "linkedResources": [
+          "tr-c-packet"
+        ]
+      },
+      {
+        "id": "tm-c-docs",
+        "title": "Important documents",
+        "summary": "Bylaws, plan, handbook—what to skim first.",
+        "required": false,
+        "estimatedTime": "35 min",
+        "status": "Not Started",
+        "category": "Documents",
+        "content": [
+          "You do not need to memorize everything; know where to find answers.",
+          "Orientation packet is optional but helpful before your first meeting."
+        ],
+        "linkedResources": [
+          "tr-c-bylaws",
+          "tr-c-orient"
+        ]
+      },
+      {
+        "id": "tm-c-priorities",
+        "title": "Current priorities and strategic direction",
+        "summary": "What the board and staff are focused on this year.",
+        "required": false,
+        "estimatedTime": "15 min",
+        "status": "Not Started",
+        "category": "Strategy",
+        "content": [
+          "Tie what you read here to committee work and community listening.",
+          "Strategic refresh may surface in meetings."
+        ],
+        "linkedResources": [
+          "tr-c-plan"
+        ]
+      }
+    ]
+  },
+  "growing": {
+    "welcomeTitle": "New Board Member Orientation",
+    "welcomeLead": "Welcome to a growing, multi-program organization. This hub orients you to oversight at scale and how we align as a board.",
+    "missionSnapshot": "We deliver services across education, workforce, and health. The board balances ambition with risk, clarity between programs, and a strong partnership with leadership.",
+    "progress": {
+      "percentComplete": 55,
+      "completedCount": 4,
+      "remainingCount": 3,
+      "lastViewedDate": "Apr 2, 2026",
+      "documentsReviewed": 4,
+      "documentsTotal": 6
+    },
+    "orientationTimeline": [
+      {
+        "id": "ot-g1",
+        "weekLabel": "Week 1",
+        "title": "Mission and portfolio",
+        "summary": "How programs fit together and what the board sees in the packet each month."
+      },
+      {
+        "id": "ot-g2",
+        "weekLabel": "Week 2",
+        "title": "Governance and reporting",
+        "summary": "Unified outcomes reporting, committee structure, and ED-board cadence."
+      },
+      {
+        "id": "ot-g3",
+        "weekLabel": "Week 3",
+        "title": "Policies and decisions",
+        "summary": "Conflicts, confidentiality, and how major votes and resolutions are tracked."
+      }
+    ],
+    "governanceBasics": [
+      {
+        "id": "gb-g1",
+        "heading": "Fiduciary duties",
+        "body": "With multiple programs, your job is to ask whether the whole enterprise stays solvent, compliant, and mission-true."
+      },
+      {
+        "id": "gb-g2",
+        "heading": "Board vs staff",
+        "body": "Leadership runs operations; the board approves strategy, budget, and policy."
+      },
+      {
+        "id": "gb-g3",
+        "heading": "Oversight",
+        "body": "Finance, audit, quality, and risk committees channel deep work; the full board focuses on direction and guardrails."
+      },
+      {
+        "id": "gb-g4",
+        "heading": "Meeting expectations",
+        "body": "Packets are longer than a small shop; skim the exec summary first, then go deeper on your committee lane."
+      }
+    ],
+    "quickAnswers": [
+      {
+        "id": "qa-g1",
+        "question": "What is the board responsible for?",
+        "answer": "Mission, multi-year strategy, financial sustainability, CEO oversight, and governance policies across all programs."
+      },
+      {
+        "id": "qa-g2",
+        "question": "Where do I find meeting materials?",
+        "answer": "Portal under Documents and the monthly board packet. Committee leads may add pre-reads mid-month."
+      },
+      {
+        "id": "qa-g3",
+        "question": "How are votes handled?",
+        "answer": "Major items are on the agenda with backup; some approvals use written consent between meetings."
+      },
+      {
+        "id": "qa-g4",
+        "question": "Who do I contact with questions?",
+        "answer": "Board chair or chief governance lead for process; ED office for program context."
+      }
+    ],
+    "resources": [
+      {
+        "id": "tr-g-handbook",
+        "title": "Board handbook",
+        "type": "handbook",
+        "description": "Governance calendar, committee charters, and norms at scale.",
+        "lastUpdated": "Mar 18, 2026",
+        "href": "#",
+        "recommended": true
+      },
+      {
+        "id": "tr-g-bylaws",
+        "title": "Bylaws",
+        "type": "bylaws",
+        "description": "Board structure, officer roles, and meeting rules.",
+        "lastUpdated": "Nov 12, 2025",
+        "href": "#"
+      },
+      {
+        "id": "tr-g-coi",
+        "title": "Conflict of interest policy",
+        "type": "policy",
+        "description": "Disclosure cadence and recusal expectations.",
+        "lastUpdated": "Jan 20, 2026",
+        "href": "#"
+      },
+      {
+        "id": "tr-g-plan",
+        "title": "Strategic plan",
+        "type": "plan",
+        "description": "Cross-program goals, metrics, and risk themes.",
+        "lastUpdated": "Oct 1, 2025",
+        "href": "#",
+        "recommended": true
+      },
+      {
+        "id": "tr-g-packet",
+        "title": "Recent board packet",
+        "type": "packet",
+        "description": "Unified leadership briefing and committee reports.",
+        "lastUpdated": "Apr 14, 2026",
+        "href": "#"
+      },
+      {
+        "id": "tr-g-orient",
+        "title": "Orientation slide deck",
+        "type": "orientation",
+        "description": "Recorded orientation and slides for async review.",
+        "lastUpdated": "Apr 1, 2026",
+        "href": "#"
+      }
+    ],
+    "modules": [
+      {
+        "id": "tm-g-welcome",
+        "title": "Welcome to the organization",
+        "summary": "Mission, leadership team, and how programs connect.",
+        "required": true,
+        "estimatedTime": "20 min",
+        "status": "Complete",
+        "category": "Welcome",
+        "content": [
+          "You will see how we talk about impact across sites and grant portfolios.",
+          "Meet the senior team and how information flows to the board."
+        ],
+        "linkedResources": [
+          "tr-g-handbook",
+          "tr-g-plan"
+        ]
+      },
+      {
+        "id": "tm-g-role",
+        "title": "Your role as a board member",
+        "summary": "Oversight at scale: what good governance looks like here.",
+        "required": true,
+        "estimatedTime": "25 min",
+        "status": "Complete",
+        "category": "Your role",
+        "content": [
+          "You help leadership prioritize where to invest attention and capital.",
+          "Recruitment looks for finance, programs, and community representation together."
+        ],
+        "linkedResources": [
+          "tr-g-handbook"
+        ]
+      },
+      {
+        "id": "tm-g-gov",
+        "title": "Governance basics",
+        "summary": "Fiduciary duties, reporting, and board-staff alignment.",
+        "required": true,
+        "estimatedTime": "30 min",
+        "status": "Complete",
+        "category": "Governance basics",
+        "content": [
+          "Standardized reporting helps compare programs without drowning in detail.",
+          "Executive session is used thoughtfully for personnel and sensitive matters."
+        ],
+        "linkedResources": [
+          "tr-g-bylaws",
+          "tr-g-coi"
+        ]
+      },
+      {
+        "id": "tm-g-policies",
+        "title": "Key policies and expectations",
+        "summary": "Conduct, confidentiality, data use, and conflicts.",
+        "required": true,
+        "estimatedTime": "25 min",
+        "status": "In Progress",
+        "category": "Policies",
+        "content": [
+          "Multi-site work means clear rules for data and partner agreements.",
+          "When unsure, disclose early."
+        ],
+        "linkedResources": [
+          "tr-g-coi",
+          "tr-g-handbook"
+        ]
+      },
+      {
+        "id": "tm-g-meetings",
+        "title": "Board meetings and decisions",
+        "summary": "Agenda design, consent items, and decision logs.",
+        "required": true,
+        "estimatedTime": "22 min",
+        "status": "Not Started",
+        "category": "Meetings",
+        "content": [
+          "Expect a mix of strategic blocks and standing approvals.",
+          "Resolutions and minutes tie back to the compliance calendar."
+        ],
+        "linkedResources": [
+          "tr-g-packet"
+        ]
+      },
+      {
+        "id": "tm-g-docs",
+        "title": "Important documents",
+        "summary": "Handbook, bylaws, plan, and orientation media.",
+        "required": false,
+        "estimatedTime": "40 min",
+        "status": "Not Started",
+        "category": "Documents",
+        "content": [
+          "Use the handbook table of contents rather than reading cover to cover in one sitting.",
+          "Optional deck reinforces what you see live in orientation."
+        ],
+        "linkedResources": [
+          "tr-g-bylaws",
+          "tr-g-orient"
+        ]
+      },
+      {
+        "id": "tm-g-priorities",
+        "title": "Current priorities and strategic direction",
+        "summary": "Expansion, reporting maturity, and leadership structure.",
+        "required": false,
+        "estimatedTime": "18 min",
+        "status": "Not Started",
+        "category": "Strategy",
+        "content": [
+          "Current board conversations focus on program growth and leadership clarity.",
+          "Your questions help stress-test assumptions before big commitments."
+        ],
+        "linkedResources": [
+          "tr-g-plan"
+        ]
+      }
+    ]
+  },
+  "privateSchool": {
+    "welcomeTitle": "New Board Member Orientation",
+    "welcomeLead": "Welcome to the board of St. Mark's Academy. This orientation connects mission, families, and the school's governance role.",
+    "missionSnapshot": "We provide faith-based education with academic rigor. The board supports the head of school, safeguards mission and trust, and thinks about long-term sustainability.",
+    "progress": {
+      "percentComplete": 38,
+      "completedCount": 2,
+      "remainingCount": 5,
+      "lastViewedDate": "Mar 30, 2026",
+      "documentsReviewed": 2,
+      "documentsTotal": 6
+    },
+    "orientationTimeline": [
+      {
+        "id": "ot-s1",
+        "weekLabel": "Week 1",
+        "title": "School overview",
+        "summary": "Mission, formation, enrollment, and how families experience the school."
+      },
+      {
+        "id": "ot-s2",
+        "weekLabel": "Week 2",
+        "title": "Governance and leadership",
+        "summary": "Board vs head of school, policy oversight, and committee rhythm."
+      },
+      {
+        "id": "ot-s3",
+        "weekLabel": "Week 3",
+        "title": "Policies and community trust",
+        "summary": "Handbook, safety, tuition and aid, and public-facing decisions."
+      }
+    ],
+    "governanceBasics": [
+      {
+        "id": "gb-s1",
+        "heading": "Fiduciary duties",
+        "body": "You steward the mission, finances, and reputation of the school in the eyes of families, parish or sponsors, and regulators."
+      },
+      {
+        "id": "gb-s2",
+        "heading": "Board vs school leadership",
+        "body": "The head of school runs daily operations; the board hires, evaluates, and supports that leader and sets major policy."
+      },
+      {
+        "id": "gb-s3",
+        "heading": "Oversight",
+        "body": "Focus on safety, finance, advancement, and educational outcomes through board-appropriate dashboards."
+      },
+      {
+        "id": "gb-s4",
+        "heading": "Meetings and community",
+        "body": "Expect transparent processes for handbook and calendar decisions; confidentiality still matters for personnel and families."
+      }
+    ],
+    "quickAnswers": [
+      {
+        "id": "qa-s1",
+        "question": "What is the board responsible for?",
+        "answer": "Mission, head-of-school oversight, major policy and finance, facilities strategy, and preserving community trust."
+      },
+      {
+        "id": "qa-s2",
+        "question": "Where do I find meeting materials?",
+        "answer": "Board portal and monthly packet; advancement and facilities committees may add focused pre-reads."
+      },
+      {
+        "id": "qa-s3",
+        "question": "How are votes handled?",
+        "answer": "Tuition, handbook, and capital items are typically board votes after committee recommendation."
+      },
+      {
+        "id": "qa-s4",
+        "question": "Who do I contact with questions?",
+        "answer": "Board chair or governance liaison; head of school office for school operations."
+      }
+    ],
+    "resources": [
+      {
+        "id": "tr-s-handbook",
+        "title": "Board handbook",
+        "type": "handbook",
+        "description": "Board-school partnership, committees, and public communication norms.",
+        "lastUpdated": "Feb 8, 2026",
+        "href": "#",
+        "recommended": true
+      },
+      {
+        "id": "tr-s-bylaws",
+        "title": "Bylaws",
+        "type": "bylaws",
+        "description": "Corporate structure, membership, and meetings.",
+        "lastUpdated": "Aug 1, 2025",
+        "href": "#"
+      },
+      {
+        "id": "tr-s-coi",
+        "title": "Conflict of interest policy",
+        "type": "policy",
+        "description": "Family relationships, vendors, and parish connections.",
+        "lastUpdated": "Jan 12, 2026",
+        "href": "#"
+      },
+      {
+        "id": "tr-s-plan",
+        "title": "Strategic plan",
+        "type": "plan",
+        "description": "Enrollment, campus, advancement, and formation priorities.",
+        "lastUpdated": "Sep 15, 2025",
+        "href": "#"
+      },
+      {
+        "id": "tr-s-packet",
+        "title": "Recent board packet",
+        "type": "packet",
+        "description": "Enrollment, facilities, and finance updates.",
+        "lastUpdated": "Apr 3, 2026",
+        "href": "#",
+        "recommended": true
+      },
+      {
+        "id": "tr-s-orient",
+        "title": "Parent and family handbook (summary)",
+        "type": "orientation",
+        "description": "What families see; aligns board policy work to daily school life.",
+        "lastUpdated": "Mar 1, 2026",
+        "href": "#"
+      }
+    ],
+    "modules": [
+      {
+        "id": "tm-s-welcome",
+        "title": "Welcome to the organization",
+        "summary": "Mission, leadership, and how the school serves families.",
+        "required": true,
+        "estimatedTime": "20 min",
+        "status": "Complete",
+        "category": "Welcome",
+        "content": [
+          "Formation and academics are both part of how we define success.",
+          "You will see how enrollment and parish or sponsor relationships shape planning."
+        ],
+        "linkedResources": [
+          "tr-s-handbook",
+          "tr-s-plan"
+        ]
+      },
+      {
+        "id": "tm-s-role",
+        "title": "Your role as a board member",
+        "summary": "Policy oversight, head-of-school partnership, and community trust.",
+        "required": true,
+        "estimatedTime": "28 min",
+        "status": "Complete",
+        "category": "Your role",
+        "content": [
+          "You are an ambassador for the mission without managing faculty or families directly.",
+          "Board decisions should be explainable to the community we serve."
+        ],
+        "linkedResources": [
+          "tr-s-handbook"
+        ]
+      },
+      {
+        "id": "tm-s-gov",
+        "title": "Governance basics",
+        "summary": "Fiduciary duties in a school context and delegation to leadership.",
+        "required": true,
+        "estimatedTime": "32 min",
+        "status": "In Progress",
+        "category": "Governance basics",
+        "content": [
+          "Know the difference between governance questions and operational ones before meetings.",
+          "Evaluation of the head of school is structured and confidential."
+        ],
+        "linkedResources": [
+          "tr-s-bylaws",
+          "tr-s-coi"
+        ]
+      },
+      {
+        "id": "tm-s-policies",
+        "title": "Key policies and expectations",
+        "summary": "Handbook lines, safety, tuition and aid, conduct.",
+        "required": true,
+        "estimatedTime": "26 min",
+        "status": "Not Started",
+        "category": "Policies",
+        "content": [
+          "Policies balance compassion with consistency for hundreds of families.",
+          "Conflicts involving your family should be disclosed early."
+        ],
+        "linkedResources": [
+          "tr-s-coi",
+          "tr-s-orient"
+        ]
+      },
+      {
+        "id": "tm-s-meetings",
+        "title": "Board meetings and decisions",
+        "summary": "Agendas, committees, and how major school decisions move.",
+        "required": true,
+        "estimatedTime": "22 min",
+        "status": "Not Started",
+        "category": "Meetings",
+        "content": [
+          "Facilities and advancement often have dedicated committee paths before the full board.",
+          "Minutes reflect approvals and key direction, especially on policy."
+        ],
+        "linkedResources": [
+          "tr-s-packet"
+        ]
+      },
+      {
+        "id": "tm-s-docs",
+        "title": "Important documents",
+        "summary": "Bylaws, strategic plan, board and family handbooks.",
+        "required": false,
+        "estimatedTime": "38 min",
+        "status": "Not Started",
+        "category": "Documents",
+        "content": [
+          "Reading the family handbook summary helps you connect policy to parent experience.",
+          "Campus master plan excerpts appear in packets during capital seasons."
+        ],
+        "linkedResources": [
+          "tr-s-bylaws",
+          "tr-s-orient"
+        ]
+      },
+      {
+        "id": "tm-s-priorities",
+        "title": "Current priorities and strategic direction",
+        "summary": "Enrollment, facilities phases, scholarships, and parent engagement.",
+        "required": false,
+        "estimatedTime": "16 min",
+        "status": "Not Started",
+        "category": "Strategy",
+        "content": [
+          "Current themes include sustainable tuition and aid, phased facilities work, and clear messaging in a competitive market.",
+          "Your questions help leadership test tradeoffs before public commitments."
+        ],
+        "linkedResources": [
+          "tr-s-plan"
+        ]
+      }
+    ]
+  }
+}

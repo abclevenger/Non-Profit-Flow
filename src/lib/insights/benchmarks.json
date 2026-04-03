@@ -1,0 +1,20 @@
+{
+  "communityNonprofit": {
+    "label": "Similar small community nonprofits (illustrative)",
+    "medianDaysDraftToClosed": 12,
+    "typicalAgendaItems": 7,
+    "minutesPostedWithinDays": 18
+  },
+  "growingNonprofit": {
+    "label": "Similar growing multi-program nonprofits (illustrative)",
+    "medianDaysDraftToClosed": 9,
+    "typicalAgendaItems": 10,
+    "minutesPostedWithinDays": 14
+  },
+  "privateSchool": {
+    "label": "Similar school / faith-based boards (illustrative)",
+    "medianDaysDraftToClosed": 11,
+    "typicalAgendaItems": 9,
+    "minutesPostedWithinDays": 16
+  }
+}
