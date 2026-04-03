@@ -141,12 +141,27 @@ async function main() {
     },
   });
 
+  let defaultAgency =
+    (await prisma.agency.findFirst({ where: { name: "Demo Platform Agency" } })) ??
+    (await prisma.agency.create({
+      data: {
+        name: "Demo Platform Agency",
+        ownerUserId: adminUser.id,
+        isWhiteLabel: false,
+      },
+    }));
+  defaultAgency = await prisma.agency.update({
+    where: { id: defaultAgency.id },
+    data: { ownerUserId: adminUser.id, isWhiteLabel: false },
+  });
+
   const orgRows: { id: string; slug: string }[] = [];
 
   for (const o of ORGANIZATION_DEFS) {
     const org = await prisma.organization.upsert({
       where: { slug: o.slug },
       create: {
+        agencyId: defaultAgency.id,
         name: o.name,
         slug: o.slug,
         missionSnippet: o.missionSnippet,
@@ -163,6 +178,7 @@ async function main() {
         billingPlan: "STARTER",
       },
       update: {
+        agencyId: defaultAgency.id,
         name: o.name,
         missionSnippet: o.missionSnippet,
         demoProfileKey: o.demoProfileKey,

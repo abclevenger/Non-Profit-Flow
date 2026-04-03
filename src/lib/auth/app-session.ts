@@ -1,8 +1,11 @@
 import type { OrganizationMembershipRole } from "@/lib/organizations/membershipRole";
 import type { MemberRole } from "@/lib/auth/roles";
+import type { AgencyMembershipRole } from "@/lib/agencies/agencyRole";
 import type {
+  SessionActiveAgency,
   SessionActiveMembership,
   SessionActiveOrganization,
+  SessionAgencySummary,
   SessionOrganizationSummary,
 } from "@/lib/auth/sessionOrganizations";
 
@@ -11,6 +14,14 @@ export type AppSession = {
   user: {
     id: string;
     role: MemberRole;
+    agencies: SessionAgencySummary[];
+    activeAgencyId: string | null;
+    activeAgency: SessionActiveAgency | null;
+    agencyMembershipRole: AgencyMembershipRole | null;
+    isAgencyOwner: boolean;
+    canManageAgency: boolean;
+    /** Platform admin: org switcher not filtered by agency. */
+    agencyScopeIsAll: boolean;
     organizations: SessionOrganizationSummary[];
     activeOrganizationId: string | null;
     activeOrganization: SessionActiveOrganization | null;

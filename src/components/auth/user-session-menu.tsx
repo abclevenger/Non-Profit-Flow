@@ -15,9 +15,20 @@ export function UserSessionMenu() {
     return null;
   }
 
-  const { email, name, role, membershipRole, isPlatformAdmin, activeOrganization, activeMembership } = session.user;
+  const {
+    email,
+    name,
+    role,
+    membershipRole,
+    isPlatformAdmin,
+    activeOrganization,
+    activeMembership,
+    activeAgency,
+    agencyScopeIsAll,
+  } = session.user;
   const displayName = (name || email || "").trim() || "Team member";
   const orgName = activeOrganization?.name ?? null;
+  const agencyLabel = agencyScopeIsAll ? "All agencies" : activeAgency?.name ?? null;
   const title = activeMembership?.title?.trim() || null;
   const roleBadge = membershipRoleDisplayLabel(membershipRole);
 
@@ -28,6 +39,11 @@ export function UserSessionMenu() {
         <p className="truncate font-medium text-stone-900">{displayName}</p>
         {title ? <p className="truncate text-xs text-stone-700">{title}</p> : null}
         <p className="truncate text-xs text-stone-600">{email}</p>
+        {agencyLabel ? (
+          <p className="mt-0.5 truncate text-[11px] text-stone-500">
+            Agency: <span className="font-medium text-stone-700">{agencyLabel}</span>
+          </p>
+        ) : null}
         {orgName ? (
           <p className="mt-1 truncate text-xs text-stone-600">
             <span className="font-medium text-stone-800">{orgName}</span>

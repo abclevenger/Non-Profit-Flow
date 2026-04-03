@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { tryCreateServerSupabaseClient } from "@/lib/supabase/server";
 import type { AppSession } from "./app-session";
+import { getActiveAgencyIdFromCookie } from "./active-agency-cookie";
 import { getActiveOrganizationIdFromCookie } from "./active-org-cookie";
 import { isMemberRole, type MemberRole } from "./roles";
 import { loadOrgSessionState } from "./sessionOrganizations";
@@ -54,7 +55,11 @@ export async function getAppAuth(): Promise<AppSession | null> {
   }
 
   const preferredOrg = await getActiveOrganizationIdFromCookie();
-  const orgState = await loadOrgSessionState(dbUser.id, preferredOrg);
+  const preferredAgency = await getActiveAgencyIdFromCookie();
+  const orgState = await loadOrgSessionState(dbUser.id, preferredOrg, {
+    isPlatformAdmin: Boolean(dbUser.isPlatformAdmin),
+    preferredAgencyId: preferredAgency,
+  });
   const legacyRole = roleFromDb(dbUser.role);
 
   const image =
@@ -68,6 +73,13 @@ export async function getAppAuth(): Promise<AppSession | null> {
       image,
       isPlatformAdmin: Boolean(dbUser.isPlatformAdmin),
       role: orgState.organizations.length > 0 ? orgState.effectiveMemberRole : legacyRole,
+      agencies: orgState.agencies,
+      activeAgencyId: orgState.activeAgencyId,
+      activeAgency: orgState.activeAgency,
+      agencyMembershipRole: orgState.agencyMembershipRole,
+      isAgencyOwner: orgState.isAgencyOwner,
+      canManageAgency: orgState.canManageAgency,
+      agencyScopeIsAll: orgState.agencyScopeIsAll,
       organizations: orgState.organizations,
       activeOrganizationId: orgState.activeOrganizationId,
       activeOrganization: orgState.activeOrganization,

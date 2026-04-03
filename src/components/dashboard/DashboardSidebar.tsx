@@ -115,6 +115,16 @@ export function DashboardSidebar({
         settingsNavItems.push({ href: "/settings/routing", label: "Issue routing" });
       }
     }
+    const hasActiveOrg = Boolean(session?.user?.activeOrganizationId);
+    if (hasActiveOrg && role && isMemberRole(role)) {
+      if (!settingsNavItems.some((i) => i.href === "/settings/account")) {
+        settingsNavItems.push({
+          href: "/settings/account",
+          label: "My account",
+          primary: settingsNavItems.length === 0,
+        });
+      }
+    }
     return { mainNav: items, settingsNavItems };
   }, [navItems, session, effectiveModules]);
 

@@ -5,6 +5,7 @@ import type { OrganizationMembershipRole } from "@/lib/organizations/membershipR
  */
 export function membershipRoleDisplayLabel(role: OrganizationMembershipRole | null): string {
   if (!role) return "Member";
+  if (role === "PLATFORM_ADMIN") return "Platform administrator";
   if (role === "VIEWER") return "Viewer";
   if (role === "DEMO_USER") return "Demo participant";
   const p = membershipRoleToProductRole(role);
@@ -41,6 +42,8 @@ export const SAAS_PRODUCT_ROLE_LABELS: Record<SaasProductRole, string> = {
 /** Maps stored membership role to a product role for display (first match wins). */
 export function membershipRoleToProductRole(role: OrganizationMembershipRole): SaasProductRole | null {
   switch (role) {
+    case "PLATFORM_ADMIN":
+      return "platform_admin";
     case "OWNER":
     case "ADMIN":
       return "organization_admin";

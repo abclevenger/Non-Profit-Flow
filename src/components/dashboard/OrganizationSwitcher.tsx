@@ -6,7 +6,7 @@ import { useWorkspace } from "@/lib/workspace-context";
 
 export function OrganizationSwitcher() {
   const { data: session, status } = useSession();
-  const { organizationId, organizations, setActiveOrganization, hasOrganization } = useWorkspace();
+  const { organizationId, organizationsInScope, setActiveOrganization, hasOrganization } = useWorkspace();
 
   if (status === "loading") {
     return (
@@ -21,7 +21,7 @@ export function OrganizationSwitcher() {
     return null;
   }
 
-  if (organizations.length === 0) {
+  if (organizationsInScope.length === 0) {
     return (
       <div className="flex min-w-0 flex-col gap-1">
         <span className="text-xs font-medium text-stone-600">Organization</span>
@@ -47,9 +47,9 @@ export function OrganizationSwitcher() {
         className="max-w-full rounded-lg border border-stone-200/90 bg-white/90 px-3 py-2 text-sm font-medium text-stone-900 shadow-sm backdrop-blur-sm outline-none ring-stone-200 transition-shadow focus:border-stone-300 focus:ring-2 focus:ring-stone-200/80"
         aria-describedby="active-organization-hint"
       >
-        {organizations.map((o) => {
+        {organizationsInScope.map((o) => {
           const roleLabel = membershipRoleDisplayLabel(o.membershipRole);
-          const subtitle = [o.membershipTitle, roleLabel].filter(Boolean).join(" · ");
+          const subtitle = [o.agencyName, o.membershipTitle, roleLabel].filter(Boolean).join(" · ");
           return (
             <option key={o.id} value={o.id}>
               {o.isDemoTenant ? `${o.name} (demo)` : o.name}

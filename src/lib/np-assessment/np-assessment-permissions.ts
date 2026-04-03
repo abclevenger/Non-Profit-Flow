@@ -37,6 +37,7 @@ export function canFillNpAssessmentWizard(
   if (role === "ATTORNEY_ADVISOR") return false;
   if (role === "BOARD_MEMBER" && !allowBoardMemberFill) return false;
   return (
+    role === "PLATFORM_ADMIN" ||
     role === "OWNER" ||
     role === "ADMIN" ||
     role === "BOARD_CHAIR" ||
@@ -58,13 +59,17 @@ export function canPerformNpAssessmentAction(
   switch (action) {
     case "create":
     case "archive":
-      return role === "OWNER" || role === "ADMIN";
+      return role === "PLATFORM_ADMIN" || role === "OWNER" || role === "ADMIN";
     case "submit":
-      return role === "OWNER" || role === "ADMIN" || role === "BOARD_CHAIR";
+      return (
+        role === "PLATFORM_ADMIN" || role === "OWNER" || role === "ADMIN" || role === "BOARD_CHAIR"
+      );
     case "fill":
       /* Coarse check (e.g. nav); per-assessment use `canFillNpAssessmentWizard(..., allowBoardMemberFill)`. */
       return canFillNpAssessmentWizard(role, false, true);
     case "view_report":
+      /* Read-only report / standards / executive pages for every org member, including viewers. */
+      return true;
     case "export":
     case "review_flagged":
       return role !== "VIEWER";

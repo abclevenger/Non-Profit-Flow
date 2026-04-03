@@ -5,6 +5,8 @@ import type { MemberRole } from "@/lib/auth/roles";
  * Maps into UI `MemberRole` via `membershipRoleToMemberRole`.
  */
 export const ORG_MEMBERSHIP_ROLES = [
+  /** Agency / master account — full org access without customer org-admin duties in analytics. */
+  "PLATFORM_ADMIN",
   "OWNER",
   "ADMIN",
   "BOARD_CHAIR",
@@ -22,10 +24,13 @@ export type OrganizationMembershipRole = (typeof ORG_MEMBERSHIP_ROLES)[number];
 const MEMBERSHIP_ROLE_ALIASES: Record<string, OrganizationMembershipRole> = {
   ORGANIZATION_ADMIN: "ADMIN",
   STAFF_MEMBER: "STAFF",
+  /** Product / CSV synonym */
+  PLATFORM_OPERATOR: "PLATFORM_ADMIN",
 };
 
 export function coerceOrgMembershipRole(raw: string): OrganizationMembershipRole {
-  const normalized = MEMBERSHIP_ROLE_ALIASES[raw] ?? raw;
+  const key = raw.trim().toUpperCase();
+  const normalized = MEMBERSHIP_ROLE_ALIASES[key] ?? key;
   if ((ORG_MEMBERSHIP_ROLES as readonly string[]).includes(normalized)) {
     return normalized as OrganizationMembershipRole;
   }
@@ -35,6 +40,7 @@ export function coerceOrgMembershipRole(raw: string): OrganizationMembershipRole
 /** Maps org-scoped role to existing permission matrix (`lib/auth/permissions.ts`). */
 export function membershipRoleToMemberRole(role: OrganizationMembershipRole): MemberRole {
   switch (role) {
+    case "PLATFORM_ADMIN":
     case "OWNER":
     case "ADMIN":
       return "ADMIN";
@@ -56,13 +62,13 @@ export function membershipRoleToMemberRole(role: OrganizationMembershipRole): Me
 }
 
 export function canManageOrgSettings(role: OrganizationMembershipRole): boolean {
-  return role === "OWNER" || role === "ADMIN";
+  return role === "PLATFORM_ADMIN" || role === "OWNER" || role === "ADMIN";
 }
 
 export function canManageOrgRouting(role: OrganizationMembershipRole): boolean {
-  return role === "OWNER" || role === "ADMIN";
+  return role === "PLATFORM_ADMIN" || role === "OWNER" || role === "ADMIN";
 }
 
 export function canViewAllExpertReviewsInOrg(role: OrganizationMembershipRole): boolean {
-  return role === "OWNER" || role === "ADMIN";
+  return role === "PLATFORM_ADMIN" || role === "OWNER" || role === "ADMIN";
 }

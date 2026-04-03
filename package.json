@@ -12,6 +12,7 @@
     "db:push": "prisma db push",
     "db:repair-sqlite": "prisma db execute --file prisma/sql/sqlite-repair-dev.sql --schema prisma/schema.prisma",
     "db:seed": "prisma db seed",
+    "db:seed:saas": "tsx prisma/seed-governance-saas.ts",
     "db:migrate": "prisma migrate dev"
   },
   "dependencies": {

@@ -29,4 +29,14 @@ SET "organizationId" = (
 )
 WHERE "organizationId" IS NULL;
 
+-- UserProfile: display overrides (spec: full_name, avatar_url)
+ALTER TABLE "UserProfile" ADD COLUMN "fullName" TEXT;
+ALTER TABLE "UserProfile" ADD COLUMN "avatarUrl" TEXT;
+
+-- Agency layer (Platform → Agency → Organization). Run after `Agency` / `AgencyMember` tables exist from `db push`.
+-- If `Organization.agencyId` is missing, create a fallback agency and backfill (adjust owner user id as needed).
+-- ALTER TABLE "Organization" ADD COLUMN "agencyId" TEXT;
+-- CREATE TABLE "Agency" (...);
+-- UPDATE "Organization" SET "agencyId" = (SELECT "id" FROM "Agency" LIMIT 1) WHERE "agencyId" IS NULL;
+
 PRAGMA foreign_keys = ON;

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { UserSessionMenu } from "@/components/auth/user-session-menu";
+import { AgencySwitcher } from "./AgencySwitcher";
 import { OrganizationSwitcher } from "./OrganizationSwitcher";
 
 export type DashboardHeaderProps = {
@@ -62,6 +63,7 @@ export function DashboardHeader({
         </div>
         <div className="flex w-full flex-col gap-3 sm:max-w-xs lg:w-auto lg:min-w-[220px]">
           <UserSessionMenu />
+          <AgencySwitcher />
           <OrganizationSwitcher />
           <Link
             href={ctaHref}

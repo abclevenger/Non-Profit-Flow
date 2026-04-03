@@ -23,7 +23,7 @@ type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 type AppAuthContextValue = {
   session: AppSession | null;
   status: AuthStatus;
-  update: (data?: { activeOrganizationId?: string | null }) => Promise<void>;
+  update: (data?: { activeOrganizationId?: string | null; activeAgencyId?: string | null }) => Promise<void>;
 };
 
 const AppAuthContext = createContext<AppAuthContextValue | null>(null);
@@ -137,7 +137,15 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
   }, [fetchSession, router]);
 
   const update = useCallback(
-    async (data?: { activeOrganizationId?: string | null }) => {
+    async (data?: { activeOrganizationId?: string | null; activeAgencyId?: string | null }) => {
+      if (data?.activeAgencyId != null && data.activeAgencyId !== "") {
+        await fetch("/api/auth/active-agency", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ agencyId: data.activeAgencyId }),
+        });
+      }
       if (data?.activeOrganizationId) {
         await fetch("/api/auth/active-organization", {
           method: "POST",

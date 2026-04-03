@@ -29,7 +29,9 @@ model User {
   sessions            Session[]
   contentAccessLogs   ContentAccessLog[]
   organizationMemberships OrganizationMembership[]
-  profile               UserProfile?
+  agencyMemberships       AgencyMember[]
+  ownedAgencies           Agency[] @relation("AgencyOwner")
+  profile                 UserProfile?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -39,9 +41,13 @@ model User {
 model UserProfile {
   userId              String  @id
   user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Preferred display name (mirrors product `full_name`; falls back to `User.name` in UI).
+  fullName            String?
   jobTitle            String?
   phone               String?
   timezone            String?
+  /// Public avatar URL (mirrors product `avatar_url`; falls back to `User.image`).
+  avatarUrl           String?
   /// JSON string (SQLite): notification prefs, meeting defaults — extend without migrations when possible.
   preferencesJson     String?
   createdAt           DateTime @default(now())
@@ -97,10 +103,44 @@ model ContentAccessLog {
   @@index([organizationId, createdAt])
 }
 
+/// White-label reseller / law firm / MSP — owns many nonprofit `Organization` rows.
+model Agency {
+  id           String   @id @default(cuid())
+  name         String
+  ownerUserId  String
+  owner        User     @relation("AgencyOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  isWhiteLabel Boolean  @default(false)
+  organizations Organization[]
+  members       AgencyMember[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([ownerUserId])
+}
+
+/// Agency-level team (GoHighLevel-style sub-account operators).
+model AgencyMember {
+  id        String   @id @default(cuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// AGENCY_ADMIN | AGENCY_STAFF
+  role      String   @default("AGENCY_STAFF")
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([agencyId, userId])
+  @@index([userId])
+}
+
 /// Tenant. Demo orgs: `isDemoTenant` + seeded data; `useSupabaseTenantData` reads Postgres via service role / RLS.
 /// `billingPlan`: future — STARTER | GROWTH | ENTERPRISE
 model Organization {
   id               String   @id @default(cuid())
+  agencyId         String
+  agency           Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
   name             String
   slug             String   @unique
   missionSnippet   String?
@@ -138,6 +178,8 @@ model Organization {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
 }
 
 /// Global template: nonprofit organizational assessment (Authenticity Consulting / United Way style).
@@ -270,7 +312,7 @@ model OrganizationMembership {
   organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   userId         String
   user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// System permission in this org (OWNER | ADMIN | BOARD_CHAIR | …). Use `membershipRoleDisplayLabel` for UI.
+  /// System permission in this org (PLATFORM_ADMIN | OWNER | ADMIN | BOARD_CHAIR | …). Use `membershipRoleDisplayLabel` for UI.
   role String @default("VIEWER")
   /// Real-world position in this org only (e.g. Board Chair, Treasurer). Not used for authorization.
   title  String?
