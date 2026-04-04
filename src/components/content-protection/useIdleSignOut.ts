@@ -20,7 +20,11 @@ export function useIdleSignOut() {
   useEffect(() => {
     if (status !== "authenticated") return;
 
-    const idleMs = isTrustedDeviceActive() ? TRUSTED_IDLE_MS : STRICT_IDLE_MS;
+    const MAX_TIMEOUT_MS = 2_147_483_647;
+    const idleMs = Math.min(
+      isTrustedDeviceActive() ? TRUSTED_IDLE_MS : STRICT_IDLE_MS,
+      MAX_TIMEOUT_MS,
+    );
 
     const reset = () => {
       if (timer.current) clearTimeout(timer.current);
