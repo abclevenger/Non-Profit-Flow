@@ -42,7 +42,7 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   missing_code: "Sign-in link was incomplete. Try again.",
   config: "Authentication is not configured.",
   auth_backend:
-    "We could not load your account after sign-in. If you are on a fresh clone or an old SQLite file, stop the dev server, run `npx prisma db push` (or `db push --force-reset` if push complains), then `npm run db:seed`, and try again.",
+    "We could not load your account after sign-in. The app database is usually missing, out of date, or unreachable. Locally: stop the dev server, run `npx prisma db push` (add `--force-reset` only if you intend to wipe data), then `npm run db:seed`, and sign in again. On Vercel or other hosts: set `DATABASE_URL` and apply the same Prisma schema (push or migrate) so the User table exists.",
   dev_login:
     "Developer sign-in failed unexpectedly. Check the terminal for [dev-login-bypass] logs. Prefer a normal browser tab at http://localhost:3000 (not only the editor preview) so cookies apply reliably.",
   dev_login_disabled: "Developer sign-in is disabled in this environment (not development and ENABLE_DEV_LOGIN_BYPASS is unset).",

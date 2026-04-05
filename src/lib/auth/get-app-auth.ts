@@ -8,7 +8,7 @@ import type { AppSession } from "./app-session";
 import { getActiveAgencyIdFromCookie } from "./active-agency-cookie";
 import { getActiveOrganizationIdFromCookie } from "./active-org-cookie";
 import { isMemberRole, type MemberRole } from "./roles";
-import { loadOrgSessionState } from "./sessionOrganizations";
+import { emptyWorkspaceSessionState, loadOrgSessionState } from "./sessionOrganizations";
 import { ensureDemoUserFlagOnUser } from "@/lib/demo/demo-agency-member";
 
 function roleFromDb(value: string | undefined | null): MemberRole {
@@ -63,10 +63,16 @@ export async function getAppAuth(): Promise<AppSession | null> {
 
   const preferredOrg = await getActiveOrganizationIdFromCookie();
   const preferredAgency = await getActiveAgencyIdFromCookie();
-  const orgState = await loadOrgSessionState(dbUser.id, preferredOrg, {
-    isPlatformAdmin: Boolean(dbUser.isPlatformAdmin),
-    preferredAgencyId: preferredAgency,
-  });
+  let orgState;
+  try {
+    orgState = await loadOrgSessionState(dbUser.id, preferredOrg, {
+      isPlatformAdmin: Boolean(dbUser.isPlatformAdmin),
+      preferredAgencyId: preferredAgency,
+    });
+  } catch (err) {
+    console.error("[getAppAuth] loadOrgSessionState failed; using empty workspace", err);
+    orgState = emptyWorkspaceSessionState();
+  }
   const legacyRole = roleFromDb(dbUser.role);
 
   const image =

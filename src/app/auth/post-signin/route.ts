@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getAppAuth } from "@/lib/auth/get-app-auth";
 import { ACTIVE_AGENCY_COOKIE } from "@/lib/auth/active-agency-cookie";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/lib/auth/active-org-cookie";
-import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -68,18 +67,8 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/login", url.origin));
   }
 
-  /** Fresh DB read — post-signin must not rely on derived session fields for routing. */
-  let isPlatformAdmin = false;
-  try {
-    const platformRow = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { isPlatformAdmin: true },
-    });
-    isPlatformAdmin = Boolean(platformRow?.isPlatformAdmin);
-  } catch (err) {
-    console.error("[post-signin] platform admin lookup failed", err);
-    return NextResponse.redirect(new URL("/login?error=auth_backend", url.origin));
-  }
+  // Same request as getAppAuth — `isPlatformAdmin` already came from Prisma on the server.
+  const isPlatformAdmin = Boolean(session.user.isPlatformAdmin);
 
   if (isPlatformAdmin) {
     const allowExplicit = platformAdminAllowsExplicitNext(next);
@@ -87,7 +76,7 @@ export async function GET(request: Request) {
     if (process.env.NODE_ENV === "development") {
       console.info("[post-signin] platform-admin routing", {
         next,
-        prismaIsPlatformAdmin: true,
+        isPlatformAdmin: true,
         allowExplicitNext: allowExplicit,
         destPath,
       });

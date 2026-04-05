@@ -151,7 +151,8 @@ function sessionActiveOrganizationFromOrg(org: OrgWithModules): SessionActiveOrg
   };
 }
 
-function emptyWorkspaceState(): WorkspaceSessionState {
+/** Safe fallback when workspace queries fail (e.g. schema drift); keeps sign-in from failing entirely. */
+export function emptyWorkspaceSessionState(): WorkspaceSessionState {
   return {
     agencies: [],
     activeAgencyId: null,
@@ -364,7 +365,7 @@ export async function loadOrgSessionState(
   });
 
   if (organizations.length === 0) {
-    return emptyWorkspaceState();
+    return emptyWorkspaceSessionState();
   }
 
   const agencyIdsValid = new Set(agencies.map((a) => a.id));
@@ -556,7 +557,7 @@ export async function loadOrgSessionState(
         canViewAllExpertReviewsInOrg: true,
       };
     }
-    return emptyWorkspaceState();
+    return emptyWorkspaceSessionState();
   }
 
   const { activeOrganization, activeMembership, role } = resolved;
