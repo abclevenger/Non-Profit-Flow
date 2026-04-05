@@ -1,5 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
+import {
+  ensureDemoAgencyMemberUser,
+  syncDemoAgencyMemberForDemoAgency,
+} from "../src/lib/demo/demo-agency-member";
 import { defaultExtendedSettings } from "../src/lib/organization-settings/extended-settings";
 
 /** Must match `OrganizationMembership.role` values in schema / `membershipRole.ts`. */
@@ -113,15 +117,20 @@ async function main() {
     where: { email: memberEmail },
     create: {
       email: memberEmail,
-      name: "Sample Board Member",
+      name: "Agency Demo Member",
       passwordHash: memberPass,
       role: "BOARD_MEMBER",
+      isDemoUser: true,
+      allowDemoOrganizationAssignment: true,
       twoFactorEnabled: false,
       twoFactorSecret: null,
     },
     update: {
       passwordHash: memberPass,
       role: "BOARD_MEMBER",
+      name: "Agency Demo Member",
+      isDemoUser: true,
+      allowDemoOrganizationAssignment: true,
     },
   });
 
@@ -152,7 +161,7 @@ async function main() {
     }));
   defaultAgency = await prisma.agency.update({
     where: { id: defaultAgency.id },
-    data: { ownerUserId: adminUser.id, isWhiteLabel: false },
+    data: { ownerUserId: adminUser.id, isWhiteLabel: false, isDemoAgency: true },
   });
 
   const orgRows: { id: string; slug: string }[] = [];
@@ -276,6 +285,32 @@ async function main() {
     });
   }
 
+  /** Same email as `DEV_BYPASS_ALLOWED_EMAIL` in `src/lib/auth/dev-login-bypass.ts` (local dev sign-in). */
+  const ashleyEmail = "ashley@ymbs.pro";
+  const ashleyUser = await prisma.user.upsert({
+    where: { email: ashleyEmail },
+    create: {
+      email: ashleyEmail,
+      name: "Ashley",
+      role: "BOARD_MEMBER",
+      isPlatformAdmin: true,
+    },
+    update: { isPlatformAdmin: true, name: "Ashley" },
+  });
+  await prisma.organizationMembership.upsert({
+    where: {
+      organizationId_userId: { organizationId: community.id, userId: ashleyUser.id },
+    },
+    create: {
+      userId: ashleyUser.id,
+      organizationId: community.id,
+      role: "ADMIN",
+      title: "Platform operator",
+      status: "ACTIVE",
+    },
+    update: { status: "ACTIVE" },
+  });
+
   if (seedSupabaseTenants && process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
       const { seedSupabaseTenantForDemoOrg } = await import("./seed-supabase-tenant");
@@ -296,11 +331,15 @@ async function main() {
     console.warn("NP assessment catalog seed skipped or failed:", e);
   }
 
+  await ensureDemoAgencyMemberUser(prisma);
+  await syncDemoAgencyMemberForDemoAgency(prisma, defaultAgency.id);
+
   console.log("Seed complete (multi-tenant organizations).");
   console.log("Admin:", adminEmail, "/ BoardAdmin1!z9 — platform admin; OWNER on all demo orgs");
   console.log("  2FA (TOTP) secret:", demoTotpSecret);
   console.log("Member:", memberEmail, "/ MemberPass1!z9 — community + growing (BOARD_MEMBER)");
   console.log("Guest:", guestEmail, "/ GuestView1!z9 — community only (VIEWER)");
+  console.log("Dev / Supabase OTP:", ashleyEmail, "— platform admin; ADMIN on", community.slug, "(use dev-login or email code)");
 }
 
 main()

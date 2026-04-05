@@ -31,7 +31,7 @@ export async function POST() {
     return NextResponse.json({ error: "Supabase service role not configured." }, { status: 503 });
   }
 
-  const sb = createServiceRoleSupabaseClient();
+  const sb = createServiceRoleSupabaseClient("api/auth/sync-supabase-membership");
   const uid = user.supabaseAuthId;
 
   const activeMemberships = user.organizationMemberships.filter((m) => m.status === "ACTIVE");

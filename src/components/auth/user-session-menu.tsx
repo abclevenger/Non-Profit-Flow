@@ -1,6 +1,6 @@
 "use client";
 
-import { performClientSignOut } from "@/lib/auth/client-sign-out";
+import { LogOutButton } from "@/components/auth/logout-button";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { membershipRoleDisplayLabel } from "@/lib/saas/roles";
 import { useAppSession } from "./app-auth-provider";
@@ -21,6 +21,7 @@ export function UserSessionMenu() {
     role,
     membershipRole,
     isPlatformAdmin,
+    isDemoUser,
     activeOrganization,
     activeMembership,
     activeAgency,
@@ -58,18 +59,17 @@ export function UserSessionMenu() {
               Platform admin
             </span>
           ) : null}
+          {isDemoUser ? (
+            <span className="rounded-md bg-amber-100/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950 ring-1 ring-amber-200/80">
+              Demo user
+            </span>
+          ) : null}
         </div>
         <p className="mt-1 text-[10px] text-stone-500">
           App permission layer: <span className="font-medium text-stone-600">{ROLE_LABELS[role]}</span>
         </p>
       </div>
-      <button
-        type="button"
-        onClick={() => void performClientSignOut("/login")}
-        className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-50"
-      >
-        Sign out
-      </button>
+      <LogOutButton className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-50" />
     </div>
   );
 }

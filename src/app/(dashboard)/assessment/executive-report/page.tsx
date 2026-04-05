@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { ExecutiveReportClient } from "@/components/np-assessment/ExecutiveReportClient";
 import { coerceOrgMembershipRole } from "@/lib/organizations/membershipRole";
 import { canPerformNpAssessmentAction } from "@/lib/np-assessment/np-assessment-permissions";
-import { loadCompletedReportBundle } from "@/lib/np-assessment/report-page-data";
+import { resolveNpAssessmentReportDisplay } from "@/lib/np-assessment/report-page-data";
 
 export const metadata = {
   title: "Executive report | Non-Profit Flow",
@@ -27,9 +27,16 @@ export default async function ExecutiveReportPage({ searchParams }: Props) {
   }
 
   const sp = await searchParams;
-  const bundle = await loadCompletedReportBundle(organizationId, sp.assessmentId);
+  const data = await resolveNpAssessmentReportDisplay(organizationId, sp.assessmentId);
 
-  if (bundle.kind !== "live") {
+  if (!data.ok) {
+    if (data.reason === "no_catalog") {
+      return (
+        <div className="mx-auto max-w-lg rounded-2xl border border-stone-200/90 bg-white p-8 text-center text-sm text-stone-600 shadow-sm">
+          <p>Assessment catalog is not loaded. Run the database seed for nonprofit assessment categories.</p>
+        </div>
+      );
+    }
     return (
       <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-stone-200/90 bg-white p-8 text-center shadow-sm">
         <h1 className="font-serif text-xl font-semibold text-stone-900">No executive summary yet</h1>
@@ -42,10 +49,17 @@ export default async function ExecutiveReportPage({ searchParams }: Props) {
   }
 
   return (
-    <ExecutiveReportClient
-      report={bundle.report}
-      executive={bundle.executive}
-      organizationName={session.user.activeOrganization?.name ?? undefined}
-    />
+    <div className="space-y-4">
+      {data.variant === "demo" ? (
+        <p className="mx-auto max-w-3xl rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-950">
+          Demo organization: this summary uses illustrative responses matching the standards hub preview.
+        </p>
+      ) : null}
+      <ExecutiveReportClient
+        report={data.report}
+        executive={data.executive}
+        organizationName={session.user.activeOrganization?.name ?? undefined}
+      />
+    </div>
   );
 }

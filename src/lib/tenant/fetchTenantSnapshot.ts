@@ -46,7 +46,7 @@ async function fromTable<T>(
  * Loads normalized tenant rows for one organization (service role — call only after Prisma membership check).
  */
 export async function fetchTenantSnapshot(organizationId: string): Promise<TenantSnapshot> {
-  const sb = createServiceRoleSupabaseClient();
+  const sb = createServiceRoleSupabaseClient("lib/tenant/fetchTenantSnapshot");
 
   const [
     overlayRes,

@@ -10,6 +10,7 @@ import { isMemberRole } from "@/lib/auth/roles";
 import type { Session } from "@/lib/auth/app-session";
 import { canAccessReviewsQueue, canManageIssueRouting } from "@/lib/expert-review/permissions";
 import { canAccessGcReviewQueue } from "@/lib/gc-review/permissions";
+import { LogOutButton } from "@/components/auth/logout-button";
 import { useOrganizationBranding } from "@/lib/organization-branding-context";
 import { MODULE_KEY_BY_NAV_HREF } from "@/lib/organization-settings/modules";
 import { canManageOrganizationSettings } from "@/lib/organization-settings/permissions";
@@ -84,7 +85,10 @@ export function DashboardSidebar({
       return effectiveModules[key] === true;
     });
     if (session?.user?.isPlatformAdmin) {
-      items = [...items, { href: "/platform-admin", label: "Platform admin" }];
+      items = [...items, { href: "/platform-admin", label: "Platform hub" }];
+    }
+    if (session?.user?.agencies?.length || session?.user?.isPlatformAdmin) {
+      items = [...items, { href: "/agency", label: "Agency hub" }];
     }
     if (role === "ADMIN") {
       items = [
@@ -235,6 +239,11 @@ export function DashboardSidebar({
                 </Link>
               ))}
             </div>
+          </div>
+        ) : null}
+        {session?.user ? (
+          <div className="mt-3 shrink-0 border-t border-stone-200/80 px-1 pt-3">
+            <LogOutButton className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-left text-sm font-semibold text-stone-800 hover:bg-white/80" />
           </div>
         ) : null}
       </nav>

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import type { cookies } from "next/headers";
 import { getSupabaseAnonKey, getSupabaseUrl, isSupabaseConfigured } from "./env";
+import { getSupabaseAuthCookieOptions } from "./session-cookie-options";
 
 type CookieStore = Awaited<ReturnType<typeof cookies>>;
 
@@ -18,6 +19,7 @@ export function createServerSupabaseClient(cookieStore: CookieStore) {
   }
 
   return createServerClient(url, key, {
+    cookieOptions: getSupabaseAuthCookieOptions(),
     cookies: {
       getAll() {
         return cookieStore.getAll();

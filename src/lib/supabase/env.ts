@@ -20,7 +20,10 @@ export function isSupabaseConfigured(): boolean {
   return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
 }
 
-/** Server-only: never import this from client components. */
+/**
+ * Server secret — not available in the browser bundle (never use `NEXT_PUBLIC_*` for this).
+ * Import only from server files or `server-only` modules (e.g. `@/lib/supabase/admin`).
+ */
 export function getSupabaseServiceRoleKey(): string | undefined {
   const v = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   return v || undefined;

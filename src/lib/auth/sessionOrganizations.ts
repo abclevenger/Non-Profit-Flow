@@ -400,10 +400,61 @@ export async function loadOrgSessionState(
   const scopedOrgs = organizations.filter(orgInAgencyScope);
   const orgIdsScoped = new Set(scopedOrgs.map((o) => o.id));
 
-  let preferredOrg =
-    preferredOrganizationId && orgMap.has(preferredOrganizationId) && orgIdsScoped.has(preferredOrganizationId)
-      ? preferredOrganizationId
-      : scopedOrgs[0]?.id ?? organizations[0]!.id;
+  let preferredOrg: string | null;
+  const cookieInScope =
+    Boolean(preferredOrganizationId) &&
+    orgMap.has(preferredOrganizationId!) &&
+    orgIdsScoped.has(preferredOrganizationId!);
+  const cookieOrgSummary = cookieInScope ? orgMap.get(preferredOrganizationId!)! : null;
+  /** Platform admins must not “resume” a demo org via cookie; choose a real tenant or hub mode. */
+  const useCookieForActiveOrg = Boolean(cookieOrgSummary && (!isPlatformAdmin || !cookieOrgSummary.isDemoTenant));
+
+  if (
+    process.env.NODE_ENV === "development" &&
+    isPlatformAdmin &&
+    cookieInScope &&
+    cookieOrgSummary?.isDemoTenant &&
+    !useCookieForActiveOrg
+  ) {
+    console.info("[workspace] platform-admin: skip demo org cookie", { preferredOrganizationId });
+  }
+
+  if (cookieInScope && useCookieForActiveOrg) {
+    preferredOrg = preferredOrganizationId!;
+  } else if (isPlatformAdmin) {
+    preferredOrg = scopedOrgs.find((o) => !o.isDemoTenant)?.id ?? null;
+  } else {
+    preferredOrg = scopedOrgs[0]?.id ?? organizations[0]!.id;
+  }
+
+  if (isPlatformAdmin && preferredOrg === null) {
+    const activeAgencySummary = activeAgencyId ? agenciesMap.get(activeAgencyId) ?? null : null;
+    return {
+      agencies,
+      activeAgencyId,
+      activeAgency:
+        activeAgencyId && activeAgencySummary
+          ? {
+              id: activeAgencySummary.id,
+              name: activeAgencySummary.name,
+              isWhiteLabel: activeAgencySummary.isWhiteLabel,
+            }
+          : null,
+      agencyMembershipRole: activeAgencySummary?.agencyMembershipRole ?? null,
+      isAgencyOwner: activeAgencySummary?.isOwner ?? false,
+      canManageAgency: true,
+      agencyScopeIsAll,
+      organizations,
+      activeOrganizationId: null,
+      activeOrganization: null,
+      activeMembership: null,
+      membershipRole: "PLATFORM_ADMIN",
+      effectiveMemberRole: membershipRoleToMemberRole("PLATFORM_ADMIN"),
+      canManageOrganizationSettings: true,
+      canManageIssueRouting: true,
+      canViewAllExpertReviewsInOrg: true,
+    };
+  }
 
   const activeAgencySummary = activeAgencyId ? agenciesMap.get(activeAgencyId) ?? null : null;
   const activeAgency: SessionActiveAgency | null =
@@ -469,12 +520,42 @@ export async function loadOrgSessionState(
     return null;
   };
 
-  let resolved = await resolveActive(preferredOrg);
+  let effectiveOrgId: string = preferredOrg!;
+  let resolved = await resolveActive(effectiveOrgId);
   if (!resolved) {
-    preferredOrg = organizations[0]!.id;
-    resolved = await resolveActive(preferredOrg);
+    if (isPlatformAdmin) {
+      const alt = scopedOrgs.find((o) => !o.isDemoTenant)?.id;
+      if (alt) {
+        effectiveOrgId = alt;
+        resolved = await resolveActive(effectiveOrgId);
+      }
+    }
+    if (!resolved && !isPlatformAdmin) {
+      effectiveOrgId = organizations[0]!.id;
+      resolved = await resolveActive(effectiveOrgId);
+    }
   }
   if (!resolved) {
+    if (isPlatformAdmin) {
+      return {
+        agencies,
+        activeAgencyId,
+        activeAgency,
+        agencyMembershipRole,
+        isAgencyOwner,
+        canManageAgency: true,
+        agencyScopeIsAll,
+        organizations,
+        activeOrganizationId: null,
+        activeOrganization: null,
+        activeMembership: null,
+        membershipRole: "PLATFORM_ADMIN",
+        effectiveMemberRole: membershipRoleToMemberRole("PLATFORM_ADMIN"),
+        canManageOrganizationSettings: true,
+        canManageIssueRouting: true,
+        canViewAllExpertReviewsInOrg: true,
+      };
+    }
     return emptyWorkspaceState();
   }
 
@@ -489,7 +570,7 @@ export async function loadOrgSessionState(
     canManageAgency,
     agencyScopeIsAll,
     organizations,
-    activeOrganizationId: preferredOrg,
+    activeOrganizationId: effectiveOrgId,
     activeOrganization,
     activeMembership,
     membershipRole: role,

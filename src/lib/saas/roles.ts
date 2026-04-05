@@ -39,6 +39,13 @@ export const SAAS_PRODUCT_ROLE_LABELS: Record<SaasProductRole, string> = {
   attorney_advisor: "Attorney advisor",
 };
 
+/** Agency hub seats (`AgencyMember.role` + owner); not stored as org membership roles. */
+export const AGENCY_PRODUCT_ROLE_LABELS = {
+  agency_owner: "Agency owner",
+  agency_admin: "Agency administrator",
+  agency_staff: "Agency staff",
+} as const;
+
 /** Maps stored membership role to a product role for display (first match wins). */
 export function membershipRoleToProductRole(role: OrganizationMembershipRole): SaasProductRole | null {
   switch (role) {

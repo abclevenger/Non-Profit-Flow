@@ -32,6 +32,8 @@ export type AppSession = {
     canManageIssueRouting: boolean;
     canViewAllExpertReviewsInOrg: boolean;
     isPlatformAdmin: boolean;
+    /** From `User.isDemoUser` — show subtle demo badge; never infer from email in UI. */
+    isDemoUser: boolean;
     email: string;
     name?: string | null;
     image?: string | null;

@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import {
   clearOauthTrustIntent,
   clearTrustedDeviceMarker,
@@ -14,14 +14,116 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 const RESEND_COOLDOWN_SEC = 60;
 
+const LOGIN_OTP_DRAFT_KEY = "npf-login-otp-draft";
+const OTP_DRAFT_MAX_AGE_MS = 15 * 60 * 1000;
+
+/** Ensures Supabase cookies are visible to same-origin `/api/auth/me` before hard-navigating to post-signin. */
+async function waitForServerSession(maxMs = 4000): Promise<boolean> {
+  const deadline = Date.now() + maxMs;
+  let delay = 60;
+  while (Date.now() < deadline) {
+    try {
+      const r = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
+      const j = (await r.json()) as { user?: { id?: string } | null };
+      if (j?.user && typeof j.user === "object" && j.user.id) {
+        return true;
+      }
+    } catch {
+      /* retry */
+    }
+    await new Promise((res) => setTimeout(res, delay));
+    delay = Math.min(Math.round(delay * 1.65), 500);
+  }
+  return false;
+}
+
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   oauth: "Sign-in with LinkedIn did not complete. Try again or use email code.",
   missing_code: "Sign-in link was incomplete. Try again.",
   config: "Authentication is not configured.",
+  auth_backend:
+    "We could not load your account after sign-in. If you are on a fresh clone or an old SQLite file, stop the dev server, run `npx prisma db push` (or `db push --force-reset` if push complains), then `npm run db:seed`, and try again.",
+  dev_login:
+    "Developer sign-in failed unexpectedly. Check the terminal for [dev-login-bypass] logs. Prefer a normal browser tab at http://localhost:3000 (not only the editor preview) so cookies apply reliably.",
+  dev_login_disabled: "Developer sign-in is disabled in this environment (not development and ENABLE_DEV_LOGIN_BYPASS is unset).",
+  dev_login_supabase:
+    "Developer sign-in needs Supabase: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local (see .env.example).",
+  dev_login_service_role:
+    "Add SUPABASE_SERVICE_ROLE_KEY to .env.local (Supabase Dashboard → Project Settings → API → service_role). Restart the dev server after saving.",
+  dev_login_email: "Dev login only allows ashley@ymbs.pro.",
+  dev_login_prisma_user:
+    "No Prisma user for ashley@ymbs.pro. From the project root run: npx prisma db push && npm run db:seed",
+  dev_login_link:
+    "Supabase could not issue a magic link for this user (generateLink failed). Check service role key, Supabase Auth logs, and that the email exists in Supabase Auth.",
+  dev_login_verify:
+    "Session could not be created after the magic link step (verifyOtp failed). Try again; if it persists, confirm anon key matches your Supabase project and redirect URLs include this origin.",
 };
 
-export function LoginForm() {
-  const router = useRouter();
+function useAuthTrace(showDevLogin: boolean) {
+  return useCallback(
+    (...args: unknown[]) => {
+      if (showDevLogin || process.env.NODE_ENV === "development") {
+        console.log("[auth:trace]", ...args);
+      }
+    },
+    [showDevLogin],
+  );
+}
+
+/** Document capture-phase pointer logging — proves which node is hit and whether something sits above the button. */
+function useLoginPointerDebug(enabled: boolean, trace: (...args: unknown[]) => void) {
+  useEffect(() => {
+    if (!enabled) return;
+    const cap = (ev: PointerEvent) => {
+      if (ev.button !== 0) return;
+      const x = ev.clientX;
+      const y = ev.clientY;
+      const topEl = document.elementFromPoint(x, y);
+      const path = ev.composedPath();
+      const pathStr = path
+        .slice(0, 14)
+        .map((n) => {
+          if (!(n instanceof Element)) {
+            return (n as object)?.constructor?.name ?? String(n);
+          }
+          const tag = n.tagName.toLowerCase();
+          const id = n.id ? `#${n.id}` : "";
+          let cls = "";
+          if (typeof (n as HTMLElement).className === "string") {
+            const parts = (n as HTMLElement).className.trim().split(/\s+/).filter(Boolean).slice(0, 4);
+            cls = parts.length ? `.${parts.join(".")}` : "";
+          }
+          return `${tag}${id}${cls}`;
+        })
+        .join(" | ");
+      let hit: Record<string, string> = {};
+      if (topEl instanceof HTMLElement) {
+        const cs = window.getComputedStyle(topEl);
+        hit = {
+          pointerEvents: cs.pointerEvents,
+          opacity: cs.opacity,
+          position: cs.position,
+          zIndex: cs.zIndex,
+        };
+      }
+      trace("[pointer-debug:capture]", {
+        targetTag: ev.target instanceof Element ? ev.target.tagName : String(ev.target),
+        elementFromPoint:
+          topEl instanceof Element ? `${topEl.tagName}${topEl.id ? `#${topEl.id}` : ""}` : String(topEl),
+        ...hit,
+        composedPath: pathStr,
+      });
+    };
+    document.addEventListener("pointerdown", cap, true);
+    trace("[pointer-debug] installed document capture listener (see [pointer-debug:capture] on click)");
+    return () => document.removeEventListener("pointerdown", cap, true);
+  }, [enabled, trace]);
+}
+
+export function LoginForm({ showDevLogin = false }: { showDevLogin?: boolean }) {
+  const trace = useAuthTrace(showDevLogin);
+  useLoginPointerDebug(showDevLogin || process.env.NODE_ENV === "development", trace);
+
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/overview";
   const urlError = searchParams.get("error");
@@ -43,6 +145,24 @@ export function LoginForm() {
     }, 1000);
     return () => window.clearInterval(id);
   }, [resendCooldownActive]);
+
+  /** Restore OTP step after refresh (e.g. auth listener) so the code form does not disappear mid-flow. */
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(LOGIN_OTP_DRAFT_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { email?: string; at?: number };
+      if (typeof parsed.email !== "string" || !parsed.email) return;
+      if (Date.now() - (parsed.at ?? 0) > OTP_DRAFT_MAX_AGE_MS) {
+        sessionStorage.removeItem(LOGIN_OTP_DRAFT_KEY);
+        return;
+      }
+      setEmail(parsed.email);
+      setStep("otp");
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   async function signInWithLinkedIn() {
     setError(null);
@@ -79,9 +199,11 @@ export function LoginForm() {
       return;
     }
     try {
+      trace("sendOtp start", { email: normalized, origin: window.location.origin });
       const sb = createBrowserSupabaseClient();
       const safeNext = callbackUrl.startsWith("/") ? callbackUrl : "/overview";
       const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+      trace("sendOtp emailRedirectTo", emailRedirectTo);
       const { error: err } = await sb.auth.signInWithOtp({
         email: normalized,
         options: {
@@ -90,17 +212,28 @@ export function LoginForm() {
         },
       });
       if (err) {
+        trace("sendOtp supabase error", err.message, err);
         setError(err.message);
         setPending(false);
         return;
       }
+      trace("sendOtp ok → OTP step");
       clearOauthTrustIntent();
+      try {
+        sessionStorage.setItem(
+          LOGIN_OTP_DRAFT_KEY,
+          JSON.stringify({ email: normalized, at: Date.now() }),
+        );
+      } catch {
+        /* private mode */
+      }
       setStep("otp");
       setResendHint(null);
       setResendCooldownSec(RESEND_COOLDOWN_SEC);
     } catch (caught) {
       const msg =
         caught instanceof Error ? caught.message : "We could not send a code right now. Please try again in a moment.";
+      trace("sendOtp catch", caught);
       setError(msg);
     } finally {
       setPending(false);
@@ -120,6 +253,7 @@ export function LoginForm() {
       const sb = createBrowserSupabaseClient();
       const safeNext = callbackUrl.startsWith("/") ? callbackUrl : "/overview";
       const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+      trace("resendOtp emailRedirectTo", emailRedirectTo);
       const { error: err } = await sb.auth.signInWithOtp({
         email: normalized,
         options: {
@@ -128,6 +262,7 @@ export function LoginForm() {
         },
       });
       if (err) {
+        trace("resendOtp supabase error", err.message);
         setError(err.message);
         return;
       }
@@ -152,6 +287,7 @@ export function LoginForm() {
       return;
     }
     try {
+      trace("verifyOtp start", { email: normalized });
       const sb = createBrowserSupabaseClient();
       const { error: err } = await sb.auth.verifyOtp({
         email: normalized,
@@ -159,19 +295,39 @@ export function LoginForm() {
         type: "email",
       });
       if (err) {
+        trace("verifyOtp supabase error", err.message);
         setError(err.message);
         setPending(false);
         return;
       }
+      // Apply trust marker before any further await so onAuthStateChange → fetchSession
+      // does not treat an old expired marker as “sign out” during this sign-in.
       if (trustDevice) {
         writeTrustedDeviceMarker();
       } else {
         clearTrustedDeviceMarker();
       }
-      router.push(callbackUrl.startsWith("/") ? callbackUrl : "/overview");
-      router.refresh();
+      await sb.auth.getSession();
+      const serverReady = await waitForServerSession(5000);
+      trace("verifyOtp ok, /api/auth/me ready=", serverReady);
+      if (!serverReady) {
+        trace("verifyOtp: navigating anyway — cookies may still apply on full navigation");
+      }
+      try {
+        sessionStorage.removeItem(LOGIN_OTP_DRAFT_KEY);
+      } catch {
+        /* ignore */
+      }
+      const safeNext =
+        callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/overview";
+      // Full navigation so Supabase cookies are always attached to the post-signin request
+      // (client router transitions can race session persistence).
+      window.location.assign(
+        `${window.location.origin}/auth/post-signin?next=${encodeURIComponent(safeNext)}`,
+      );
     } catch (caught) {
       const msg = caught instanceof Error ? caught.message : "Verification failed.";
+      trace("verifyOtp catch", caught);
       setError(msg);
     } finally {
       setPending(false);
@@ -179,7 +335,7 @@ export function LoginForm() {
   }
 
   return (
-    <div className="rounded-2xl border border-stone-200/90 bg-white p-8 shadow-sm ring-1 ring-stone-100">
+    <div className="relative isolate z-[1] overflow-visible rounded-2xl border border-stone-200/90 bg-white p-8 shadow-sm ring-1 ring-stone-100">
       <div className="mb-6 flex flex-col items-center gap-2">
         <Image
           src="/govflow-logo.png"
@@ -197,6 +353,15 @@ export function LoginForm() {
           ? "Enter your email. We will send a one-time sign-in code (check spam)."
           : `Enter the code sent to ${email.trim().toLowerCase()}.`}
       </p>
+
+      {showDevLogin ? (
+        <DevDeveloperSignInSection
+          trace={trace}
+          safeNext={
+            callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/overview"
+          }
+        />
+      ) : null}
 
       {error || urlError ? (
         <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950 ring-1 ring-amber-200/80" role="alert">
@@ -329,6 +494,11 @@ export function LoginForm() {
           <button
             type="button"
             onClick={() => {
+              try {
+                sessionStorage.removeItem(LOGIN_OTP_DRAFT_KEY);
+              } catch {
+                /* ignore */
+              }
               setStep("email");
               setOtp("");
               setError(null);
@@ -347,6 +517,52 @@ export function LoginForm() {
           Back to home
         </Link>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Dev bypass: plain <a href> → GET /api/auth/dev-login (302 + Set-Cookie).
+ * Root issue when clicks “do nothing”: React onClick/fetch never runs in some embedded/preview browsers;
+ * full navigation does not depend on JS handlers. Do not use next/link here (prefetch would hit GET).
+ */
+function DevDeveloperSignInSection({
+  safeNext,
+  trace,
+}: {
+  safeNext: string;
+  trace: (...args: unknown[]) => void;
+}) {
+  const href = `/api/auth/dev-login?next=${encodeURIComponent(safeNext)}`;
+
+  return (
+    <div
+      className="relative z-[100] mt-6 rounded-xl border border-dashed border-amber-300/90 bg-amber-50/50 px-4 py-4 text-left shadow-sm ring-1 ring-amber-200/60 pointer-events-auto"
+      role="region"
+      aria-label="Developer sign in"
+    >
+      <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900/90">Developer sign in</p>
+      <p className="mt-1 text-xs text-amber-950/80">
+        Uses a real browser navigation (GET + redirect) so sign-in works even when JS click handlers are blocked.
+        Same origin as this tab — safe for localhost, LAN IP, and any dev port.
+      </p>
+      <a
+        href={href}
+        className="mt-3 flex w-full cursor-pointer items-center justify-center rounded-lg border border-amber-800/30 bg-white px-3 py-2.5 text-center text-sm font-semibold text-amber-950 shadow-sm hover:bg-amber-50"
+        onPointerDown={() => trace("[dev-login] <a> pointerdown (native)", { href })}
+        onClick={() => {
+          trace("[dev-login] <a> click (native, before navigation)", {
+            href,
+            origin: typeof window !== "undefined" ? window.location.origin : "",
+          });
+          writeTrustedDeviceMarker();
+        }}
+      >
+        Sign in as Ashley
+      </a>
+      <p className="mt-2 text-[10px] text-amber-900/70">
+        POST fallback: same URL with fetch from DevTools if you need JSON + Set-Cookie debugging.
+      </p>
     </div>
   );
 }
@@ -372,7 +588,8 @@ function TrustDeviceCheckbox({
       <span>
         <span className="font-medium text-stone-900">Trust this device for 30 days</span>
         <span className="mt-0.5 block text-xs text-stone-500">
-          Stay signed in after restarts and brief idle periods on this browser. Leave unchecked on shared computers.
+          Keeps this browser signed in for up to 30 days (session refresh + longer idle timeout). Uncheck on shared
+          computers — you&apos;ll sign out sooner when idle.
         </span>
       </span>
     </label>

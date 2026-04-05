@@ -1,12 +1,42 @@
 "use client";
 
-import { clearTrustedDeviceMarker } from "@/lib/auth/trusted-device";
+import { clearOauthTrustIntent, clearTrustedDeviceMarker } from "@/lib/auth/trusted-device";
+
+function clearAppBrowserStorage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.clear();
+  } catch {
+    /* private mode / blocked */
+  }
+  try {
+    localStorage.clear();
+  } catch {
+    /* quota / private mode */
+  }
+  clearOauthTrustIntent();
+  clearTrustedDeviceMarker();
+}
 
 /**
- * Clears trusted-device state, ends the Supabase browser session, then navigates (full reload clears RSC cache).
+ * Ends Supabase session, clears workspace httpOnly cookies (via API), wipes client storage
+ * (org/agency trust + demo-adjacent markers), then hard-navigates so RSC cache resets.
  */
 export async function performClientSignOut(redirectTo: string = "/login"): Promise<void> {
-  clearTrustedDeviceMarker();
+  if (typeof window === "undefined") return;
+
+  try {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+    });
+  } catch {
+    /* offline — still attempt local cleanup */
+  }
+
+  clearAppBrowserStorage();
+
   try {
     const { createBrowserSupabaseClient } = await import("@/lib/supabase/browser");
     const sb = createBrowserSupabaseClient();
@@ -14,7 +44,6 @@ export async function performClientSignOut(redirectTo: string = "/login"): Promi
   } catch {
     /* Supabase misconfigured */
   }
-  if (typeof window !== "undefined") {
-    window.location.href = redirectTo;
-  }
+
+  window.location.assign(redirectTo);
 }

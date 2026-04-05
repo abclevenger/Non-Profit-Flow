@@ -1,5 +1,6 @@
 "use client";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   createContext,
   useCallback,
@@ -35,53 +36,144 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AppSession | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
   const oauthIntentApplied = useRef(false);
+  /** Suppress stale results when mount + onAuthStateChange(INITIAL_SESSION) overlap. */
+  const fetchSeqRef = useRef(0);
+  /** When browser Supabase session exists but /api/auth/me is empty (cookie/Prisma lag), do not log out yet. */
+  const meLagRetriesRef = useRef(0);
 
   const fetchSession = useCallback(async () => {
+    const seq = ++fetchSeqRef.current;
+    if (process.env.NODE_ENV === "development") {
+      console.info("[auth:debug] fetchSession start", { seq });
+    }
+    const apply = (next: { session: AppSession | null; status: AuthStatus }) => {
+      if (seq !== fetchSeqRef.current) return;
+      if (next.status === "authenticated") {
+        meLagRetriesRef.current = 0;
+      }
+      setSession(next.session);
+      setStatus(next.status);
+      if (process.env.NODE_ENV === "development") {
+        console.info("[auth:debug] state →", next.status, { seq, hasUser: Boolean(next.session?.user) });
+      }
+    };
+
+    let sb: SupabaseClient | null = null;
+
+    const deferUnauthIfClientSessionExists = async (): Promise<boolean> => {
+      if (!sb) return false;
+      try {
+        const { data: sd } = await sb.auth.getSession();
+        if (!sd.session?.user) return false;
+        if (meLagRetriesRef.current >= 24) return false;
+        meLagRetriesRef.current += 1;
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[auth:debug] defer unauth (client session, /me empty)", {
+            attempt: meLagRetriesRef.current,
+            seq,
+          });
+        }
+        window.setTimeout(() => void fetchSession(), 450);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
     try {
       let supabaseHasUser = false;
 
       try {
         const { createBrowserSupabaseClient } = await import("@/lib/supabase/browser");
-        const sb = createBrowserSupabaseClient();
+        sb = createBrowserSupabaseClient();
 
+        // Stale/expired trust marker must not call signOut(): onAuthStateChange can run
+        // between verifyOtp and writeTrustedDeviceMarker and would wipe a brand-new session.
         if (trustedDeviceExpiryRequiresReauth()) {
           clearTrustedDeviceMarker();
-          await sb.auth.signOut();
         }
 
         const { data } = await sb.auth.getSession();
         supabaseHasUser = Boolean(data.session?.user);
+        if (process.env.NODE_ENV === "development") {
+          console.info("[auth:debug] getSession", { seq, supabaseHasUser });
+        }
       } catch {
         /* Supabase env missing */
       }
 
+      let meCalls = 0;
       const readMe = async () => {
+        meCalls += 1;
         const r = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
-        return (await r.json()) as AppSession | { user: null };
+        const j = (await r.json()) as AppSession | { user: null };
+        if (process.env.NODE_ENV === "development" && meCalls === 1) {
+          console.info("[auth:debug] /api/auth/me first", {
+            seq,
+            hasUser: Boolean(j && "user" in j && j.user),
+          });
+        }
+        return j;
       };
 
       let data = await readMe();
       if (data && "user" in data && data.user) {
-        setSession(data as AppSession);
-        setStatus("authenticated");
+        apply({ session: data as AppSession, status: "authenticated" });
         return;
       }
 
-      if (supabaseHasUser) {
-        await new Promise((r) => setTimeout(r, ME_RETRY_MS));
+      // After /auth/post-signin or dev-login redirect, HttpOnly cookies + /api/auth/me can lag the
+      // first client tick; AuthReadyBoundary would send users to /login if we go unauthenticated too soon.
+      const pollMs = 120;
+      const pollAttempts = 12;
+      for (let i = 0; i < pollAttempts; i++) {
+        await new Promise((r) => setTimeout(r, pollMs));
+        if (sb) {
+          try {
+            const { data: sd } = await sb.auth.getSession();
+            supabaseHasUser = Boolean(sd.session?.user);
+            if (supabaseHasUser) {
+              await sb.auth.refreshSession().catch(() => {});
+            }
+          } catch {
+            /* ignore */
+          }
+        }
         data = await readMe();
         if (data && "user" in data && data.user) {
-          setSession(data as AppSession);
-          setStatus("authenticated");
+          apply({ session: data as AppSession, status: "authenticated" });
           return;
         }
       }
 
-      setSession(null);
-      setStatus("unauthenticated");
+      if (supabaseHasUser && sb) {
+        const { data: refData, error: refErr } = await sb.auth.refreshSession();
+        if (process.env.NODE_ENV === "development") {
+          console.info("[auth:debug] refreshSession", {
+            seq,
+            ok: !refErr,
+            hasSession: Boolean(refData.session?.user),
+          });
+        }
+        await new Promise((r) => setTimeout(r, ME_RETRY_MS));
+        data = await readMe();
+        if (data && "user" in data && data.user) {
+          apply({ session: data as AppSession, status: "authenticated" });
+          return;
+        }
+        await new Promise((r) => setTimeout(r, ME_RETRY_MS));
+        data = await readMe();
+        if (data && "user" in data && data.user) {
+          apply({ session: data as AppSession, status: "authenticated" });
+          return;
+        }
+      }
+
+      if (await deferUnauthIfClientSessionExists()) return;
+      apply({ session: null, status: "unauthenticated" });
     } catch {
-      setSession(null);
-      setStatus("unauthenticated");
+      if (await deferUnauthIfClientSessionExists()) return;
+      apply({ session: null, status: "unauthenticated" });
     }
   }, []);
 
@@ -123,9 +215,13 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
           const sb = createBrowserSupabaseClient();
           const {
             data: { subscription },
-          } = sb.auth.onAuthStateChange(() => {
+          } = sb.auth.onAuthStateChange((event) => {
             void fetchSession();
-            router.refresh();
+            // Avoid router.refresh on TOKEN_REFRESHED — it refetches RSC while /api/auth/me can briefly
+            // lag cookies and triggers a spurious unauthenticated → /login hop after sign-in.
+            if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+              router.refresh();
+            }
           });
           unsub = () => subscription.unsubscribe();
         } catch {

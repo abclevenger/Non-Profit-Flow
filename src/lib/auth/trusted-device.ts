@@ -1,6 +1,7 @@
 /**
  * Client-only: 30-day “trust this device” marker (localStorage + first-party cookie flag).
- * Does not store secrets — only records that the user chose extended persistence on this browser.
+ * Does not store secrets — records opt-in for long idle timeout + calendar re-auth at expiry.
+ * Supabase auth cookies use the same 30-day maxAge via `getSupabaseAuthCookieOptions()` (see lib/supabase).
  */
 
 export const TRUSTED_DEVICE_STORAGE_KEY = "npf_trusted_device_v1";
@@ -55,7 +56,9 @@ export function isTrustedDeviceActive(): boolean {
 }
 
 /**
- * True when a stored trust marker exists but is past `until` — caller should end the Supabase session.
+ * True when a stored trust marker exists but is past `until`.
+ * Callers typically clear the marker and treat the device as non-trusted (stricter idle);
+ * avoid signing out a valid Supabase session here — it races with fresh sign-in (email OTP).
  */
 export function trustedDeviceExpiryRequiresReauth(): boolean {
   if (typeof window === "undefined") return false;

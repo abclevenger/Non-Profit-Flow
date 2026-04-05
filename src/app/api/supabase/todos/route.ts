@@ -26,7 +26,7 @@ export async function GET() {
 
   if (isServiceRoleConfigured()) {
     try {
-      const admin = createServiceRoleSupabaseClient();
+      const admin = createServiceRoleSupabaseClient("api/supabase/todos GET");
       const { data, error } = await admin.from("todos").select("id, name, created_at").order("created_at", {
         ascending: false,
       });
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const admin = createServiceRoleSupabaseClient();
+    const admin = createServiceRoleSupabaseClient("api/supabase/todos POST");
     const { data, error } = await admin.from("todos").insert({ name }).select("id, name, created_at").single();
     if (error) {
       console.error("[api/supabase/todos] POST:", error.message);

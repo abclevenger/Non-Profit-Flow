@@ -13,7 +13,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const nextParam = url.searchParams.get("next");
-  const next = nextParam?.startsWith("/") ? nextParam : "/overview";
+  const next =
+    nextParam?.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/overview";
 
   if (!isSupabaseConfigured()) {
     return NextResponse.redirect(`${url.origin}/login?error=config`);
@@ -30,5 +31,6 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${url.origin}/login?error=oauth`);
   }
 
-  return NextResponse.redirect(`${url.origin}${next}`);
+  const dest = `/auth/post-signin?next=${encodeURIComponent(next)}`;
+  return NextResponse.redirect(`${url.origin}${dest}`);
 }

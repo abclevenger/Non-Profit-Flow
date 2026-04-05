@@ -5,7 +5,7 @@ import { AssessmentReportToolbar } from "@/components/np-assessment/AssessmentRe
 import { NpAssessmentReportView } from "@/components/np-assessment/NpAssessmentReportView";
 import { coerceOrgMembershipRole } from "@/lib/organizations/membershipRole";
 import { canPerformNpAssessmentAction } from "@/lib/np-assessment/np-assessment-permissions";
-import { loadCompletedReportBundle } from "@/lib/np-assessment/report-page-data";
+import { resolveNpAssessmentReportDisplay } from "@/lib/np-assessment/report-page-data";
 
 export const metadata = {
   title: "Assessment report | Non-Profit Flow",
@@ -28,9 +28,16 @@ export default async function AssessmentReportPage({ searchParams }: Props) {
   }
 
   const sp = await searchParams;
-  const bundle = await loadCompletedReportBundle(organizationId, sp.assessmentId);
+  const data = await resolveNpAssessmentReportDisplay(organizationId, sp.assessmentId);
 
-  if (bundle.kind !== "live") {
+  if (!data.ok) {
+    if (data.reason === "no_catalog") {
+      return (
+        <div className="mx-auto max-w-lg rounded-2xl border border-stone-200/90 bg-white p-8 text-center text-sm text-stone-600 shadow-sm">
+          <p>Assessment catalog is not loaded. Run the database seed for nonprofit assessment categories.</p>
+        </div>
+      );
+    }
     return (
       <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-stone-200/90 bg-white p-8 text-center shadow-sm">
         <h1 className="font-serif text-xl font-semibold text-stone-900">No report yet</h1>
@@ -50,8 +57,13 @@ export default async function AssessmentReportPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-4">
-      <AssessmentReportToolbar organizationId={organizationId} assessmentId={bundle.assessmentId} />
-      <NpAssessmentReportView report={bundle.report} aiPayload={bundle.aiPayload} />
+      {data.variant === "demo" ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-950">
+          Demo organization: this report uses illustrative responses. CSV export unlocks after you submit a real assessment.
+        </p>
+      ) : null}
+      <AssessmentReportToolbar organizationId={organizationId} assessmentId={data.assessmentId} />
+      <NpAssessmentReportView report={data.report} aiPayload={data.aiPayload} />
     </div>
   );
 }

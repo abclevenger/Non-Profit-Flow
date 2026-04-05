@@ -39,7 +39,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
             <DashboardHeader
               orgName={branding.effectiveOrganizationName}
               reportingPeriod={profile.reportingPeriod}
-              isDemoTenant={organization?.isDemoTenant ?? true}
+              isDemoTenant={organization?.isDemoTenant ?? false}
             />
             <ModuleRouteGuard>
               <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 lg:px-8">{children}</div>

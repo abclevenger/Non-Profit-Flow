@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { updateSupabaseSession } from "@/lib/supabase/middleware";
+import {
+  hasLikelySupabaseAuthCookies,
+  updateSupabaseSession,
+} from "@/lib/supabase/update-supabase-session";
 
 function copyCookies(from: NextResponse, to: NextResponse) {
   from.cookies.getAll().forEach(({ name, value }) => {
@@ -10,8 +13,21 @@ function copyCookies(from: NextResponse, to: NextResponse) {
 }
 
 export async function proxy(req: NextRequest) {
-  const { response: supabaseResponse, supabaseUser } = await updateSupabaseSession(req);
   const { pathname } = req.nextUrl;
+  /** Without `export const config` (Turbopack 16.2 can error on matcher parsing), skip static assets here. */
+  if (
+    pathname.startsWith("/_next/static") ||
+    pathname.startsWith("/_next/image") ||
+    pathname === "/favicon.ico"
+  ) {
+    return NextResponse.next();
+  }
+  const lastSegment = pathname.split("/").pop() ?? "";
+  if (lastSegment.includes(".") && !pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  const { response: supabaseResponse, supabaseUser } = await updateSupabaseSession(req);
 
   const publicPaths = [
     "/",
@@ -20,6 +36,7 @@ export async function proxy(req: NextRequest) {
     "/forgot-password",
     "/reset-password",
     "/auth/callback",
+    "/auth/post-signin",
   ];
   const isPublic = publicPaths.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
@@ -46,6 +63,19 @@ export async function proxy(req: NextRequest) {
   }
 
   if (!supabaseUser) {
+    /**
+     * Earliest /login redirect in the stack: do not send users away if Supabase cookies are present.
+     * getUser() can lag getSession/refresh for one navigation; RSC + /api/auth/me then recover.
+     */
+    if (hasLikelySupabaseAuthCookies(req)) {
+      if (process.env.NODE_ENV === "development") {
+        console.info("[auth:debug] proxy skip /login — sb auth cookies present, user null after refresh");
+      }
+      return supabaseResponse;
+    }
+    if (process.env.NODE_ENV === "development") {
+      console.info("[auth:debug] proxy → /login (no Supabase user, no sb auth cookies)", { pathname });
+    }
     const login = new URL("/login", req.nextUrl.origin);
     login.searchParams.set("callbackUrl", pathname + req.nextUrl.search);
     const redirect = NextResponse.redirect(login);
@@ -55,7 +85,3 @@ export async function proxy(req: NextRequest) {
 
   return supabaseResponse;
 }
-
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
-};

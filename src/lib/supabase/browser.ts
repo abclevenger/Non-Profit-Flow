@@ -2,8 +2,9 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
+import { getSupabaseAuthCookieOptions } from "./session-cookie-options";
 
-/** Browser / Client Components — uses anon key only. */
+/** Browser / Client Components — uses anon key only; 30-day persistent cookies for refresh + PKCE session. */
 export function createBrowserSupabaseClient() {
   const url = getSupabaseUrl();
   const key = getSupabaseAnonKey();
@@ -12,5 +13,7 @@ export function createBrowserSupabaseClient() {
       "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY).",
     );
   }
-  return createBrowserClient(url, key);
+  return createBrowserClient(url, key, {
+    cookieOptions: getSupabaseAuthCookieOptions(),
+  });
 }

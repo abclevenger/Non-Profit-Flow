@@ -6,17 +6,21 @@ import {
   getSupabaseUrl,
   isSupabaseConfigured,
 } from "@/lib/supabase/env";
+import { logServiceRoleEnvOnce } from "@/lib/supabase/log-service-role-debug";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Operator diagnostics — no secrets returned. Unauthenticated by design for Vercel smoke tests;
  * restrict with Vercel Deployment Protection or a firewall if needed.
+ *
+ * `query` probes optional `public.todos` only — it does not validate Supabase Auth cookies or JWTs.
  */
 export async function GET() {
   const url = getSupabaseUrl();
   const anon = getSupabaseAnonKey();
   const service = getSupabaseServiceRoleKey();
+  logServiceRoleEnvOnce();
   const configured = isSupabaseConfigured();
 
   let host: string | null = null;
@@ -67,17 +71,32 @@ export async function GET() {
     if (process.env.NODE_ENV === "development") {
       console.error("[api/supabase/health] query error:", error.message, error.code);
     }
+    /** PGRST205 = table not in schema cache (missing or invisible) — keys are still fine for Auth. */
+    const optionalTodosMissing =
+      error.code === "PGRST205" ||
+      error.message?.includes("schema cache") ||
+      error.message?.includes("does not exist");
+
+    if (optionalTodosMissing) {
+      payload.query = {
+        attempted: true,
+        usedServiceRole: Boolean(service),
+        success: true,
+        postgresCode: error.code,
+        hint:
+          "Supabase API keys work. Optional `public.todos` table is missing — add it (.env.example SQL) or ignore; this does not affect Auth.",
+      };
+      return NextResponse.json(payload, { status: 200 });
+    }
+
     payload.query = {
       attempted: true,
       usedServiceRole: Boolean(service),
       success: false,
       postgresCode: error.code,
-      hint:
-        error.code === "PGRST116" || error.message?.includes("relation") || error.message?.includes("does not exist")
-          ? 'Create a public.todos table (see SQL in .env.example) or ignore if you use other tables.'
-          : service
-            ? "Query failed with service role — check table name and Supabase project status."
-            : "Anon query failed — often RLS, missing table, or wrong key. Add SUPABASE_SERVICE_ROLE_KEY for server-side checks (never expose to client).",
+      hint: service
+        ? "Query failed with service role — check Supabase project status or RLS."
+        : "Anon query failed — often RLS or wrong key. Add SUPABASE_SERVICE_ROLE_KEY for server checks (never expose to client).",
     };
     return NextResponse.json(payload, { status: 200 });
   }

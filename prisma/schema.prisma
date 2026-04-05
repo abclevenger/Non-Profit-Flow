@@ -20,6 +20,8 @@ model User {
   isPlatformAdmin  Boolean @default(false)
   /// When false, server should refuse new memberships on `Organization.isDemoTenant` unless platform admin assigns.
   allowDemoOrganizationAssignment Boolean @default(false)
+  /// Seeded demo personas (e.g. agency bench) — surfaced in UI via session, never hardcoded by email in components.
+  isDemoUser       Boolean @default(false)
   /// Legacy default; effective dashboard permissions come from `OrganizationMembership` for the active org.
   role             String  @default("BOARD_MEMBER")
   twoFactorEnabled Boolean @default(false)
@@ -110,6 +112,14 @@ model Agency {
   ownerUserId  String
   owner        User     @relation("AgencyOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
   isWhiteLabel Boolean  @default(false)
+  /// Showcase / sandbox agency — auto-attaches configured demo bench users (`lib/demo/demo-agency-member.ts`).
+  isDemoAgency Boolean @default(false)
+  /// White-label / portal branding (optional overrides).
+  brandingDisplayName  String?
+  brandingLogoUrl      String?
+  brandingPrimaryColor String?
+  brandingSupportEmail String?
+  brandingFooterText   String?
   organizations Organization[]
   members       AgencyMember[]
   createdAt    DateTime @default(now())

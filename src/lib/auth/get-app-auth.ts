@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -7,6 +9,7 @@ import { getActiveAgencyIdFromCookie } from "./active-agency-cookie";
 import { getActiveOrganizationIdFromCookie } from "./active-org-cookie";
 import { isMemberRole, type MemberRole } from "./roles";
 import { loadOrgSessionState } from "./sessionOrganizations";
+import { ensureDemoUserFlagOnUser } from "@/lib/demo/demo-agency-member";
 
 function roleFromDb(value: string | undefined | null): MemberRole {
   if (value && isMemberRole(value)) return value;
@@ -54,6 +57,10 @@ export async function getAppAuth(): Promise<AppSession | null> {
     });
   }
 
+  await ensureDemoUserFlagOnUser(prisma, dbUser.id, dbUser.email);
+  dbUser = await prisma.user.findUnique({ where: { id: dbUser.id } });
+  if (!dbUser) return null;
+
   const preferredOrg = await getActiveOrganizationIdFromCookie();
   const preferredAgency = await getActiveAgencyIdFromCookie();
   const orgState = await loadOrgSessionState(dbUser.id, preferredOrg, {
@@ -72,6 +79,7 @@ export async function getAppAuth(): Promise<AppSession | null> {
       name: dbUser.name ?? name ?? email,
       image,
       isPlatformAdmin: Boolean(dbUser.isPlatformAdmin),
+      isDemoUser: Boolean(dbUser.isDemoUser),
       role: orgState.organizations.length > 0 ? orgState.effectiveMemberRole : legacyRole,
       agencies: orgState.agencies,
       activeAgencyId: orgState.activeAgencyId,

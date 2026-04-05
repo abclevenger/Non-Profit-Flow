@@ -9,6 +9,10 @@
  * on first login, `get-app-auth` links `User.supabaseAuthId`.
  */
 import { PrismaClient } from "@prisma/client";
+import {
+  ensureDemoAgencyMemberUser,
+  syncDemoAgencyMemberForDemoAgency,
+} from "../src/lib/demo/demo-agency-member";
 import { defaultExtendedSettings } from "../src/lib/organization-settings/extended-settings";
 import type { OrganizationMembershipRole } from "../src/lib/organizations/membershipRole";
 
@@ -249,7 +253,7 @@ async function main() {
     }));
   mainAgency = await prisma.agency.update({
     where: { id: mainAgency.id },
-    data: { ownerUserId: ashleyId, isWhiteLabel: false },
+    data: { ownerUserId: ashleyId, isWhiteLabel: false, isDemoAgency: true },
   });
 
   let lawAgency =
@@ -263,7 +267,7 @@ async function main() {
     }));
   lawAgency = await prisma.agency.update({
     where: { id: lawAgency.id },
-    data: { ownerUserId: legalOwnerId, isWhiteLabel: true },
+    data: { ownerUserId: legalOwnerId, isWhiteLabel: true, isDemoAgency: true },
   });
 
   const agencyIdByKey: Record<AgencyKey, string> = {
@@ -341,6 +345,11 @@ async function main() {
       },
     });
   }
+
+  await ensureDemoAgencyMemberUser(prisma);
+  await syncDemoAgencyMemberForDemoAgency(prisma, mainAgency.id);
+  await syncDemoAgencyMemberForDemoAgency(prisma, lawAgency.id);
+  console.log("Demo bench user: member@board.demo → AGENCY_STAFF on demo agencies + BOARD_MEMBER on demo orgs.");
 
   console.log("Governance SaaS seed complete.");
   console.log("Platform admin: ashley@ymbs.pro (sign in with Supabase to link auth id)");
