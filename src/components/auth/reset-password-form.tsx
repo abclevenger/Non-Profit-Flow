@@ -1,48 +1,78 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { validatePasswordStrength } from "@/lib/password-policy";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 export function ResetPasswordForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token") ?? "";
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [details, setDetails] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
+  const [sessionReady, setSessionReady] = useState<"unknown" | "yes" | "no">("unknown");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const sb = createBrowserSupabaseClient();
+        const { data } = await sb.auth.getSession();
+        if (!cancelled) setSessionReady(data.session ? "yes" : "no");
+      } catch {
+        if (!cancelled) setSessionReady("no");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setDetails([]);
+    const strength = validatePasswordStrength(password);
+    if (!strength.valid) {
+      setError("Password does not meet requirements");
+      setDetails(strength.errors);
+      return;
+    }
     setPending(true);
     try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
-      });
-      const data = (await res.json()) as { error?: string; details?: string[] };
-      if (!res.ok) {
-        setError(data.error ?? "Reset failed");
-        if (data.details?.length) setDetails(data.details);
+      const sb = createBrowserSupabaseClient();
+      const { error: upErr } = await sb.auth.updateUser({ password });
+      if (upErr) {
+        setError(upErr.message || "Could not update password.");
         setPending(false);
         return;
       }
+      await sb.auth.signOut();
       router.push("/login?reset=1");
       router.refresh();
     } catch {
-      setError("Network error");
+      setError("Something went wrong. Try again.");
       setPending(false);
     }
   }
 
-  if (!token) {
+  if (sessionReady === "unknown") {
     return (
-      <div className="rounded-2xl border border-stone-200 bg-white p-8 text-center text-stone-600">
-        <p>Missing reset token. Request a new link from the forgot password page.</p>
+      <div className="rounded-2xl border border-stone-200/90 bg-white p-8 text-center text-stone-600 shadow-sm ring-1 ring-stone-100">
+        <p className="text-sm">Checking your reset link…</p>
+      </div>
+    );
+  }
+
+  if (sessionReady === "no") {
+    return (
+      <div className="rounded-2xl border border-stone-200/90 bg-white p-8 text-center text-stone-600 shadow-sm ring-1 ring-stone-100">
+        <p className="text-sm">
+          This page works after you open the password reset link from your email. If the link expired, request a new
+          one.
+        </p>
         <Link href="/forgot-password" className="mt-4 inline-block font-semibold text-stone-800 underline">
           Forgot password
         </Link>
@@ -53,6 +83,9 @@ export function ResetPasswordForm() {
   return (
     <div className="rounded-2xl border border-stone-200/90 bg-white p-8 shadow-sm ring-1 ring-stone-100">
       <h1 className="font-serif text-2xl font-semibold text-stone-900">Choose a new password</h1>
+      <p className="mt-2 text-sm text-stone-600">
+        Signed in for this reset only. After saving, sign in again with your new password.
+      </p>
       {error ? (
         <div className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950 ring-1 ring-amber-200/80">
           <p>{error}</p>

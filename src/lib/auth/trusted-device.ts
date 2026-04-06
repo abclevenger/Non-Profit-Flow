@@ -59,7 +59,7 @@ export function isTrustedDeviceActive(): boolean {
 /**
  * True when a stored trust marker exists but is past `until`.
  * Callers typically clear the marker and treat the device as non-trusted (stricter idle);
- * avoid signing out a valid Supabase session here — it races with fresh sign-in (email OTP).
+ * avoid signing out a valid Supabase session here — it races with fresh sign-in.
  */
 export function trustedDeviceExpiryRequiresReauth(): boolean {
   if (typeof window === "undefined") return false;
@@ -97,7 +97,7 @@ export function consumeOauthTrustIntent(): boolean | null {
   }
 }
 
-/** Drop pending OAuth intent (e.g. user chose email OTP instead or OAuth failed). */
+/** Drop pending OAuth intent (e.g. user returned to password sign-in or OAuth failed). */
 export function clearOauthTrustIntent(): void {
   if (typeof window === "undefined") return;
   try {

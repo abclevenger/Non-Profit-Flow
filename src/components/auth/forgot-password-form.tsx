@@ -6,13 +6,11 @@ import { useState } from "react";
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const [devLink, setDevLink] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
-    setDevLink(null);
     setPending(true);
     try {
       const res = await fetch("/api/auth/forgot-password", {
@@ -23,10 +21,13 @@ export function ForgotPasswordForm() {
       const data = (await res.json()) as {
         ok?: boolean;
         message?: string;
-        devHint?: { resetLink?: string };
+        error?: string;
       };
+      if (!res.ok) {
+        setMessage(data.error ?? "Something went wrong. Try again or contact your administrator.");
+        return;
+      }
       setMessage(data.message ?? "If an account exists, check your email for next steps.");
-      if (data.devHint?.resetLink) setDevLink(data.devHint.resetLink);
     } catch {
       setMessage("Something went wrong. Try again or contact your administrator.");
     } finally {
@@ -38,16 +39,11 @@ export function ForgotPasswordForm() {
     <div className="rounded-2xl border border-stone-200/90 bg-white p-8 shadow-sm ring-1 ring-stone-100">
       <h1 className="font-serif text-2xl font-semibold text-stone-900">Reset password</h1>
       <p className="mt-2 text-sm text-stone-600">
-        Enter your email. We will send a one-time link (in production). If you are locked out before a meeting, contact
-        another admin or chair — they can confirm your identity and re-issue access.
+        We will email you a secure link to choose a new password. If you are locked out, contact another administrator or
+        chair for help.
       </p>
       {message ? (
         <p className="mt-4 rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-800 ring-1 ring-stone-200/80">{message}</p>
-      ) : null}
-      {devLink ? (
-        <p className="mt-3 break-all rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-950 ring-1 ring-sky-200/80">
-          <span className="font-semibold">Development:</span> {devLink}
-        </p>
       ) : null}
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div>

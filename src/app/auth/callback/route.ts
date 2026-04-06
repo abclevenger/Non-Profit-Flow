@@ -7,9 +7,10 @@ import { getAuthPersistTierCookieOptions } from "@/lib/supabase/session-cookie-o
 export const dynamic = "force-dynamic";
 
 /**
- * OAuth/OIDC return (e.g. LinkedIn) and email magic links. Supabase redirects with ?code=;
- * we exchange for a session and set auth cookies, then redirect to `next`.
- * `td=0` = do not trust device (shorter cookie max-age); omit or `td=1` = 30-day persistence.
+ * OAuth/OIDC return (e.g. LinkedIn), Supabase email confirmations, and password-recovery links.
+ * Supabase redirects with `?code=`; we exchange for a session, set cookies, then redirect to `next`.
+ * Password recovery uses `next=/reset-password` and skips `/auth/post-signin` so the user can set a new password.
+ * `td=0` = shorter cookie max-age; omit or `td=1` = long-lived (see session-cookie-options).
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -43,6 +44,12 @@ export async function GET(request: Request) {
     secure: tier.secure,
     httpOnly: tier.httpOnly,
   });
+
+  const nextPathOnly = (next.split("?")[0] ?? next).trim() || "/overview";
+  const isPasswordRecovery = nextPathOnly === "/reset-password" || nextPathOnly.startsWith("/reset-password/");
+  if (isPasswordRecovery) {
+    return NextResponse.redirect(new URL(next, url.origin));
+  }
 
   const dest = `/auth/post-signin?next=${encodeURIComponent(next)}`;
   return NextResponse.redirect(`${url.origin}${dest}`);

@@ -91,7 +91,7 @@ export function AuthReadyBoundary({ children }: { children: ReactNode }) {
       >
         <p>Redirecting to sign in…</p>
         <p className="max-w-sm text-xs text-stone-500">
-          Use the email code we send you, or request a new one on the login page.
+          Use your email and password on the login page, or reset your password if needed.
         </p>
       </div>
     );

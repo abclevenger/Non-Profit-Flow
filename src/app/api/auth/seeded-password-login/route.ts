@@ -8,7 +8,7 @@ import {
   messageFromUnknownError,
 } from "@/lib/auth/get-app-auth-failure";
 import { issueSupabaseEmailOtpSession, type CookieWrite } from "@/lib/auth/issue-supabase-email-otp-session";
-import { isSeededPasswordLoginEnabled } from "@/lib/auth/seeded-password-login";
+import { isLegacyPrismaPasswordLoginEnabled } from "@/lib/auth/seeded-password-login";
 import { prisma } from "@/lib/prisma";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getAuthPersistTierCookieOptions } from "@/lib/supabase/session-cookie-options";
@@ -37,11 +37,11 @@ function applyAuthCookiesToResponse(
 }
 
 /**
- * Verifies Prisma `passwordHash` and issues the same Supabase cookie session as email OTP / dev-login.
+ * Verifies Prisma `passwordHash` and issues a Supabase cookie session via server-side OTP verify (legacy path).
  * `trustDevice` maps to long- vs short-lived auth cookies (see session-cookie-options).
  */
 export async function POST(request: Request) {
-  if (!isSeededPasswordLoginEnabled()) {
+  if (!isLegacyPrismaPasswordLoginEnabled()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

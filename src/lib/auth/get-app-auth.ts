@@ -180,7 +180,7 @@ async function getAppAuthFromSupabaseUser(su: User): Promise<AppSession | null> 
 
 /**
  * Server-only: Supabase session + Prisma user + org state.
- * Creates a Prisma `User` on first sign-in (email OTP) if missing.
+ * Creates or links a Prisma `User` on first successful Supabase-authenticated request if missing.
  *
  * Order matters: a valid Supabase user always wins over `DISABLE_APP_AUTH` bypass
  * (otherwise magic-link sign-in would still impersonate the bypass user).

@@ -232,7 +232,7 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
           });
           unsub = () => subscription.unsubscribe();
         } catch {
-          /* Supabase env missing — OTP login will surface configuration errors */
+          /* Supabase env missing — sign-in will surface configuration errors */
         }
       })
       .catch(() => {});

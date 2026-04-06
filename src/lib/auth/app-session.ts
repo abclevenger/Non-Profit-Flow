@@ -9,7 +9,7 @@ import type {
   SessionOrganizationSummary,
 } from "@/lib/auth/sessionOrganizations";
 
-/** Application session shape (replaces NextAuth Session for Supabase OTP auth). */
+/** Application session shape (Supabase Auth + Prisma app user + workspace state). */
 export type AppSession = {
   user: {
     id: string;

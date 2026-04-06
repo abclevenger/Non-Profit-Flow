@@ -19,8 +19,8 @@ export default function HomePage() {
         <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Nonprofit board governance</p>
         <h1 className="font-serif text-xl font-semibold text-stone-900 sm:text-2xl">Board governance workspace</h1>
         <p className="text-sm leading-relaxed text-stone-600">
-          Sign in with your board email. On a trusted device, use your password; otherwise we send a one-time code or
-          link. Create an account from the registration page when your board invites you.
+          Sign in with your board email and password. Create an account from the registration page when your board
+          invites you, or use LinkedIn if your workspace enables it.
         </p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">

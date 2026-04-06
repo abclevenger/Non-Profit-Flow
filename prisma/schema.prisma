@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  url      = env("DATABASE_URL")
 }
 /// Legacy dashboard role on `User` before org-scoped `OrganizationMembership.role` (still used for coarse defaults).
 enum UserLegacyRole {

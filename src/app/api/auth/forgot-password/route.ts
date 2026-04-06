@@ -1,10 +1,15 @@
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { randomBytes } from "crypto";
 import { getPublicAppUrl } from "@/lib/env/public-app-url";
-import { prisma } from "@/lib/prisma";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 
-const HOUR_MS = 60 * 60 * 1000;
+const GENERIC_OK_MESSAGE =
+  "If an account exists for this email, you will receive password reset instructions shortly.";
 
+/**
+ * Supabase Auth password recovery (email link → `/auth/callback` → `/reset-password`).
+ * Same response whether or not the email is registered (no account enumeration).
+ */
 export async function POST(req: Request) {
   let body: { email?: string };
   try {
@@ -16,32 +21,27 @@ export async function POST(req: Request) {
   if (!email) {
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
   }
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user?.passwordHash) {
-    return NextResponse.json({
-      ok: true,
-      message: "If an account exists for this email, you will receive reset instructions.",
-    });
+
+  const url = getSupabaseUrl();
+  const anon = getSupabaseAnonKey();
+  if (!url || !anon) {
+    return NextResponse.json({ error: "Authentication is not configured." }, { status: 503 });
   }
-  const token = randomBytes(32).toString("hex");
-  const expires = new Date(Date.now() + HOUR_MS);
-  await prisma.verificationToken.create({
-    data: {
-      identifier: email,
-      token,
-      expires,
-    },
-  });
-  const baseUrl = getPublicAppUrl();
-  const resetLink = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
-  const devHint =
-    process.env.NODE_ENV === "development"
-      ? { resetLink, expiresAt: expires.toISOString() }
-      : undefined;
+
+  const base = getPublicAppUrl();
+  const nextPath = "/reset-password";
+  const redirectTo = `${base}/auth/callback?next=${encodeURIComponent(nextPath)}&td=1`;
+
+  const sb = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+
+  if (error) {
+    console.error("[forgot-password] resetPasswordForEmail", error.message);
+    /* Still return generic message — do not leak Supabase errors to clients. */
+  }
+
   return NextResponse.json({
     ok: true,
-    message:
-      "If an account exists for this email, a reset link has been issued. Links expire in one hour. During development, the link is returned in the response for convenience.",
-    ...(devHint ? { devHint } : {}),
+    message: GENERIC_OK_MESSAGE,
   });
 }

@@ -1,9 +1,13 @@
 /**
- * Prisma `User.passwordHash` (bcrypt) sign-in, then Supabase session via server-side OTP verify
- * (no email to the user). Disabled in production only when DISABLE_PRISMA_PASSWORD_LOGIN is set.
+ * Legacy: Prisma `passwordHash` + server-issued Supabase session (pre–password-first migration).
+ * Enable only for transitional accounts with no Supabase password yet.
  */
+export function isLegacyPrismaPasswordLoginEnabled(): boolean {
+  const v = process.env.ENABLE_LEGACY_PRISMA_PASSWORD_LOGIN?.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
+/** @deprecated use isLegacyPrismaPasswordLoginEnabled */
 export function isSeededPasswordLoginEnabled(): boolean {
-  if (process.env.NODE_ENV !== "production") return true;
-  const d = process.env.DISABLE_PRISMA_PASSWORD_LOGIN?.trim().toLowerCase();
-  return !(d === "1" || d === "true" || d === "yes");
+  return isLegacyPrismaPasswordLoginEnabled();
 }
