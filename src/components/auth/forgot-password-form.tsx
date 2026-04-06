@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { setPasswordRecoveryPending } from "@/lib/auth/password-recovery-client";
 
 const GENERIC_SUCCESS =
   "If an account exists for this email, you will receive password reset instructions shortly. Check your inbox and spam folder.";
@@ -33,6 +34,7 @@ export function ForgotPasswordForm() {
         setIsSuccess(false);
         return;
       }
+      setPasswordRecoveryPending();
       setMessage(data.message ?? GENERIC_SUCCESS);
       setIsSuccess(true);
     } catch {

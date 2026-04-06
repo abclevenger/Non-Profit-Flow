@@ -7,14 +7,30 @@ import {
   setAuthPersistTierCookie,
   setPendingAuthPersist,
 } from "@/lib/auth/auth-persist-tier";
+import { consumePasswordRecoveryPending } from "@/lib/auth/password-recovery-client";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+
+function hashHasRecoveryType(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const h = window.location.hash.replace(/^#/, "").trim();
+    if (!h) return false;
+    return new URLSearchParams(h).get("type") === "recovery";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * OAuth + email confirmation + password recovery return handler (client-side).
  *
  * Server `route.ts` cannot read URL hash fragments, but Supabase sometimes delivers
  * recovery sessions via hash (implicit) or query `code` (PKCE). This page handles both.
+ *
+ * Do not call `exchangeCodeForSession` here: `createBrowserClient` uses PKCE +
+ * `detectSessionInUrl`, so `auth.initialize()` (awaited by `getSession()`) already
+ * exchanges the `code` once. A second exchange fails and sends users to `/login`.
  */
 
 async function waitForSessionFromUrl(
@@ -52,46 +68,40 @@ function AuthCallbackContent() {
         return;
       }
 
-      const nextParam = searchParams.get("next");
+      const nextParamRaw = searchParams.get("next");
+      const nextPathFromQuery = (nextParamRaw?.split("?")[0] ?? "").trim();
+      const recoveryFromHash = hashHasRecoveryType();
+      const recoveryFromStorage = consumePasswordRecoveryPending();
+      const recoveryIntent = recoveryFromHash || recoveryFromStorage;
+
+      let nextParam = nextParamRaw;
+      if (recoveryIntent) {
+        if (
+          nextPathFromQuery !== "/reset-password" &&
+          !nextPathFromQuery.startsWith("/reset-password/")
+        ) {
+          nextParam = "/reset-password";
+        }
+      }
+
       const next =
         nextParam?.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/overview";
-      const nextPathOnly = (nextParam?.split("?")[0] ?? "").trim();
+      const nextPathOnly = (next.split("?")[0] ?? "").trim();
       const isRecoveryFlow =
         nextPathOnly === "/reset-password" || nextPathOnly.startsWith("/reset-password/");
       const td = searchParams.get("td");
       const longLived = td !== "0" && td !== "false";
 
       setPendingAuthPersist(longLived);
-      const code = searchParams.get("code");
 
       try {
         const sb = createBrowserSupabaseClient();
+        setHint("Checking your session…");
 
-        if (code) {
-          const { error: exErr } = await sb.auth.exchangeCodeForSession(code);
-          if (exErr) {
-            if (process.env.NODE_ENV === "development") {
-              console.warn("[auth/callback] exchangeCodeForSession", exErr.message);
-            }
-            clearPendingAuthPersist();
-            const err = isRecoveryFlow ? "reset_session" : "oauth";
-            if (!cancelled) router.replace(`/login?error=${err}`);
-            return;
-          }
-          const { data: immediate } = await sb.auth.getSession();
-          if (!immediate.session) {
-            const recovered = await waitForSessionFromUrl(sb, 3000);
-            if (!recovered) {
-              clearPendingAuthPersist();
-              const err = isRecoveryFlow ? "reset_session" : "oauth";
-              if (!cancelled) router.replace(`/login?error=${err}`);
-              return;
-            }
-          }
-        } else {
-          setHint("Checking your session…");
-          const ok = await waitForSessionFromUrl(sb);
-          if (!ok) {
+        const { data: first } = await sb.auth.getSession();
+        if (!first.session) {
+          const recovered = await waitForSessionFromUrl(sb, 5000);
+          if (!recovered) {
             clearPendingAuthPersist();
             const err = isRecoveryFlow ? "reset_session" : "missing_code";
             if (!cancelled) router.replace(`/login?error=${err}`);
@@ -117,7 +127,8 @@ function AuthCallbackContent() {
           console.warn("[auth/callback]", e);
         }
         clearPendingAuthPersist();
-        if (!cancelled) router.replace(`/login?error=oauth`);
+        const err = isRecoveryFlow ? "reset_session" : "oauth";
+        if (!cancelled) router.replace(`/login?error=${err}`);
       }
     })();
 
