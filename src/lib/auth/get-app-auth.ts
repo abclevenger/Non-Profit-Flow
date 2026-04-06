@@ -117,16 +117,22 @@ async function getAppAuthFromSupabaseUser(su: User): Promise<AppSession | null> 
         supabaseAuthId: su.id,
       },
     });
-  } else if (dbUser.supabaseAuthId !== su.id) {
-    dbUser = await prisma.user.update({
-      where: { id: dbUser.id },
-      data: { supabaseAuthId: su.id },
-    });
-  } else if (name && dbUser.name !== name) {
-    dbUser = await prisma.user.update({
-      where: { id: dbUser.id },
-      data: { name },
-    });
+  } else {
+    const needsUpdate =
+      dbUser.supabaseAuthId !== su.id ||
+      (Boolean(name) && dbUser.name !== name) ||
+      dbUser.passwordHash != null;
+    if (needsUpdate) {
+      /* Supabase Auth owns passwords — drop legacy Prisma bcrypt when present. */
+      dbUser = await prisma.user.update({
+        where: { id: dbUser.id },
+        data: {
+          supabaseAuthId: su.id,
+          ...(name && dbUser.name !== name ? { name } : {}),
+          ...(dbUser.passwordHash != null ? { passwordHash: null } : {}),
+        },
+      });
+    }
   }
 
   await ensureDemoUserFlagOnUser(prisma, dbUser.id, dbUser.email);

@@ -49,6 +49,7 @@ model User {
   email            String         @unique
   emailVerified    DateTime?
   image            String?
+  /// Legacy bcrypt (e.g. old seed / migration). Cleared once Supabase Auth is the password source of truth.
   passwordHash     String?
   supabaseAuthId   String?        @unique @db.Uuid
   /// Cross-tenant platform operator (legal / ops). Checked server-side for admin APIs.

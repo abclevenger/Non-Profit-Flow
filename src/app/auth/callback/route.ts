@@ -18,6 +18,9 @@ export async function GET(request: Request) {
   const nextParam = url.searchParams.get("next");
   const next =
     nextParam?.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/overview";
+  const nextPathOnly = (nextParam?.split("?")[0] ?? "").trim();
+  const isPasswordRecoveryFlow =
+    nextPathOnly === "/reset-password" || nextPathOnly.startsWith("/reset-password/");
   const td = url.searchParams.get("td");
   const longLived = td !== "0" && td !== "false";
 
@@ -26,14 +29,16 @@ export async function GET(request: Request) {
   }
 
   if (!code) {
-    return NextResponse.redirect(`${url.origin}/login?error=missing_code`);
+    const err = isPasswordRecoveryFlow ? "reset_session" : "missing_code";
+    return NextResponse.redirect(`${url.origin}/login?error=${err}`);
   }
 
   const cookieStore = await cookies();
   const supabase = createServerSupabaseClient(cookieStore, { longLived });
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
-    return NextResponse.redirect(`${url.origin}/login?error=oauth`);
+    const err = isPasswordRecoveryFlow ? "reset_session" : "oauth";
+    return NextResponse.redirect(`${url.origin}/login?error=${err}`);
   }
 
   const tier = getAuthPersistTierCookieOptions(longLived ? "1" : "0");
@@ -45,8 +50,9 @@ export async function GET(request: Request) {
     httpOnly: tier.httpOnly,
   });
 
-  const nextPathOnly = (next.split("?")[0] ?? next).trim() || "/overview";
-  const isPasswordRecovery = nextPathOnly === "/reset-password" || nextPathOnly.startsWith("/reset-password/");
+  const nextPathForRedirect = (next.split("?")[0] ?? next).trim() || "/overview";
+  const isPasswordRecovery =
+    nextPathForRedirect === "/reset-password" || nextPathForRedirect.startsWith("/reset-password/");
   if (isPasswordRecovery) {
     return NextResponse.redirect(new URL(next, url.origin));
   }

@@ -40,6 +40,8 @@ async function waitForServerSession(maxMs = 4000): Promise<boolean> {
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   oauth: "Sign-in with LinkedIn did not complete. Try again or use email and password.",
   missing_code: "Sign-in link was incomplete. Try again.",
+  reset_session:
+    "Your password reset link is invalid or expired. Request a new one from Forgot password and open the latest email link.",
   config: "Authentication is not configured.",
   db_env:
     "The server cannot see `DATABASE_URL` (and Prisma needs `DIRECT_URL` too). Local: add both next to `package.json` in `.env` or `.env.local`, then restart the dev server. Deployed: Vercel → Project → Settings → Environment Variables — set them for Preview and Production, then redeploy.",
@@ -174,12 +176,8 @@ export function LoginForm() {
       </div>
       <h1 className="font-serif text-2xl font-semibold text-stone-900">Sign in</h1>
       <p className="mt-2 text-sm text-stone-600">
-        Use the email and password for your account. If you are on a personal device, keep{" "}
-        <span className="font-medium text-stone-800">Trust this device</span> on to stay signed in longer. Use{" "}
-        <Link href="/forgot-password" className="font-medium text-stone-800 underline-offset-4 hover:underline">
-          Forgot password
-        </Link>{" "}
-        if you need to reset it.
+        Use the email and password for your account. On a personal device, keep{" "}
+        <span className="font-medium text-stone-800">Trust this device</span> on to stay signed in longer.
       </p>
 
       {resetOk ? (
@@ -224,6 +222,14 @@ export function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm outline-none ring-stone-200 focus:ring-2"
           />
+          <div className="mt-1.5 flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-stone-700 underline-offset-4 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
         </div>
         <TrustDeviceCheckbox
           id="trust-device"
