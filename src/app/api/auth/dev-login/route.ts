@@ -4,6 +4,10 @@ import { NextResponse } from "next/server";
 import { ACTIVE_AGENCY_COOKIE } from "@/lib/auth/active-agency-cookie";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/lib/auth/active-org-cookie";
 import {
+  loginErrorParamFromGetAppAuthFailure,
+  messageFromUnknownError,
+} from "@/lib/auth/get-app-auth-failure";
+import {
   DEV_BYPASS_ALLOWED_EMAIL,
   isAllowedDevBypassEmail,
   isDevLoginBypassEnabled,
@@ -230,9 +234,12 @@ export async function GET(request: Request) {
 
     return res;
   } catch (err) {
-    console.error("[dev-login-bypass] GET failed", err);
+    const summary = messageFromUnknownError(err);
+    console.error("[dev-login-bypass] GET failed", summary, err);
     const login = new URL("/login", url.origin);
-    login.searchParams.set("error", "dev_login");
+    // Prisma (e.g. unreachable Supabase Postgres) throws here during findUnique — surface db_* not generic dev_login.
+    const mapped = loginErrorParamFromGetAppAuthFailure(err);
+    login.searchParams.set("error", mapped === "auth_backend" ? "dev_login" : mapped);
     return NextResponse.redirect(login);
   }
 }

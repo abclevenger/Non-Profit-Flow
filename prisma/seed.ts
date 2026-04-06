@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { type OrganizationMembershipStatus, PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
 import {
   ensureDemoAgencyMemberUser,
@@ -275,12 +275,12 @@ async function main() {
         organizationId: m.organizationId,
         role: m.role,
         title: m.title ?? null,
-        status: m.status ?? "ACTIVE",
+        status: (m.status ?? "ACTIVE") as OrganizationMembershipStatus,
       },
       update: {
         role: m.role,
         title: m.title ?? null,
-        status: m.status ?? "ACTIVE",
+        status: (m.status ?? "ACTIVE") as OrganizationMembershipStatus,
       },
     });
   }

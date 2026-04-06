@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isDevAuthBypassActive } from "@/lib/auth/dev-auth-bypass-flags";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   hasLikelySupabaseAuthCookies,
@@ -52,6 +53,11 @@ export async function proxy(req: NextRequest) {
   }
 
   if (isPublic) {
+    return supabaseResponse;
+  }
+
+  /** Insecure local bypass: no Supabase session required (see `DISABLE_APP_AUTH`). */
+  if (isDevAuthBypassActive()) {
     return supabaseResponse;
   }
 

@@ -3,40 +3,78 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
+/// Legacy dashboard role on `User` before org-scoped `OrganizationMembership.role` (still used for coarse defaults).
+enum UserLegacyRole {
+  BOARD_MEMBER
+  ADMIN
+  GUEST
+}
+
+enum AgencyMemberRole {
+  AGENCY_ADMIN
+  AGENCY_STAFF
+}
+
+enum AgencyMemberStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// Mirrors `src/lib/organizations/membershipRole.ts` — stored per org membership.
+enum OrganizationMembershipRole {
+  PLATFORM_ADMIN
+  OWNER
+  ADMIN
+  BOARD_CHAIR
+  BOARD_MEMBER
+  EXECUTIVE_DIRECTOR
+  STAFF
+  ATTORNEY_ADVISOR
+  DEMO_USER
+  VIEWER
+}
+
+enum OrganizationMembershipStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// App profile + tenancy; Supabase Auth owns credentials. Link `supabaseAuthId` to `auth.users.id` (RLS / organization_members).
 model User {
-  id               String  @id @default(cuid())
+  id               String         @id @default(cuid())
   name             String?
-  email            String  @unique
+  email            String         @unique
   emailVerified    DateTime?
   image            String?
   passwordHash     String?
-  /// Supabase Auth user id — used for Postgres RLS `auth.uid()` sync (`organization_members`).
-  supabaseAuthId   String? @unique
+  supabaseAuthId   String?        @unique @db.Uuid
   /// Cross-tenant platform operator (legal / ops). Checked server-side for admin APIs.
-  isPlatformAdmin  Boolean @default(false)
+  isPlatformAdmin  Boolean        @default(false)
   /// When false, server should refuse new memberships on `Organization.isDemoTenant` unless platform admin assigns.
   allowDemoOrganizationAssignment Boolean @default(false)
   /// Seeded demo personas (e.g. agency bench) — surfaced in UI via session, never hardcoded by email in components.
-  isDemoUser       Boolean @default(false)
+  isDemoUser       Boolean        @default(false)
   /// Legacy default; effective dashboard permissions come from `OrganizationMembership` for the active org.
-  role             String  @default("BOARD_MEMBER")
-  twoFactorEnabled Boolean @default(false)
+  role             UserLegacyRole @default(BOARD_MEMBER)
+  twoFactorEnabled Boolean        @default(false)
   twoFactorSecret  String?
 
-  accounts            Account[]
-  sessions            Session[]
-  contentAccessLogs   ContentAccessLog[]
+  contentAccessLogs       ContentAccessLog[]
   organizationMemberships OrganizationMembership[]
   agencyMemberships       AgencyMember[]
-  ownedAgencies           Agency[] @relation("AgencyOwner")
+  ownedAgencies           Agency[]                 @relation("AgencyOwner")
   profile                 UserProfile?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([supabaseAuthId])
 }
 
 /// Global personal info and preferences (1:1 with app `User`). Not org-specific — use `OrganizationMembership.title` for board/staff titles per tenant.
@@ -50,37 +88,10 @@ model UserProfile {
   timezone            String?
   /// Public avatar URL (mirrors product `avatar_url`; falls back to `User.image`).
   avatarUrl           String?
-  /// JSON string (SQLite): notification prefs, meeting defaults — extend without migrations when possible.
+  /// JSON string: notification prefs, meeting defaults — extend without migrations when possible.
   preferencesJson     String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -135,9 +146,8 @@ model AgencyMember {
   agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// AGENCY_ADMIN | AGENCY_STAFF
-  role      String   @default("AGENCY_STAFF")
-  status    String   @default("ACTIVE")
+  role      AgencyMemberRole   @default(AGENCY_STAFF)
+  status    AgencyMemberStatus @default(ACTIVE)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -322,17 +332,18 @@ model OrganizationMembership {
   organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   userId         String
   user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// System permission in this org (PLATFORM_ADMIN | OWNER | ADMIN | BOARD_CHAIR | …). Use `membershipRoleDisplayLabel` for UI.
-  role String @default("VIEWER")
+  /// System permission in this org. Use `membershipRoleDisplayLabel` for UI.
+  role   OrganizationMembershipRole   @default(VIEWER)
   /// Real-world position in this org only (e.g. Board Chair, Treasurer). Not used for authorization.
   title  String?
-  /// ACTIVE | INACTIVE — inactive members must not access org APIs or Supabase tenant RLS.
-  status String @default("ACTIVE")
+  /// Inactive members must not access org APIs or Supabase tenant RLS.
+  status OrganizationMembershipStatus @default(ACTIVE)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([organizationId, userId])
+  @@index([userId, status])
 }
 
 model GcReviewRequest {

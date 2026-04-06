@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error: "Server inserts require SUPABASE_SERVICE_ROLE_KEY (Vercel env, server-only).",
-        hint: "Anon inserts with NextAuth-only sessions usually fail RLS unless policies allow anonymous writes.",
+        hint: "POST uses the service role; without it, anon clients hit RLS unless policies allow writes.",
       },
       { status: 501 },
     );

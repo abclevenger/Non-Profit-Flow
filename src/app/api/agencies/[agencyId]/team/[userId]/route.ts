@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAgencyDashboardAccess } from "@/lib/agency-dashboard/access";
+import { type AgencyMemberRole, type AgencyMemberStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -39,12 +40,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
       ? String((body as { status: unknown }).status).toUpperCase()
       : "";
 
-  const data: { role?: string; status?: string } = {};
+  const data: { role?: AgencyMemberRole; status?: AgencyMemberStatus } = {};
   if (roleRaw === "AGENCY_ADMIN" || roleRaw === "AGENCY_STAFF") {
-    data.role = roleRaw;
+    data.role = roleRaw as AgencyMemberRole;
   }
   if (statusRaw === "ACTIVE" || statusRaw === "INACTIVE") {
-    data.status = statusRaw;
+    data.status = statusRaw as AgencyMemberStatus;
   }
 
   if (Object.keys(data).length === 0) {

@@ -156,7 +156,7 @@ export function SupabaseDemoPanels() {
           </button>
         </div>
         <p className="mt-1 text-xs text-stone-500">
-          Uses <code className="rounded bg-stone-100 px-1">GET/POST /api/supabase/todos</code> with your NextAuth session.
+          Uses <code className="rounded bg-stone-100 px-1">GET/POST /api/supabase/todos</code> with your signed-in Supabase session.
           Inserts require <code className="rounded bg-stone-100 px-1">SUPABASE_SERVICE_ROLE_KEY</code> on the server.
         </p>
         {todosMode ? (

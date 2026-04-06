@@ -41,32 +41,23 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   oauth: "Sign-in with LinkedIn did not complete. Try again or use email code.",
   missing_code: "Sign-in link was incomplete. Try again.",
   config: "Authentication is not configured.",
+  db_env:
+    "`DATABASE_URL` is not set (or not visible to the server). Add it to `.env` / `.env.local` locally, or under Vercel → Project → Settings → Environment Variables for Production and Preview, then redeploy. This app expects Supabase Postgres pooler + direct URLs (`DATABASE_URL` / `DIRECT_URL`) as documented in `.env.example`.",
+  db_connect:
+    "The app could not reach the database (wrong URL, network, or database paused). Confirm `DATABASE_URL` points to a running instance, IP allowlists allow Vercel if applicable, and try again.",
+  db_schema:
+    "The database exists but tables or columns are missing or out of date. Locally: stop the dev server, run `npx prisma db push`, then `npm run db:seed`. On a hosted DB: run `npx prisma migrate deploy` (or `db push`) against that database, then redeploy.",
   auth_backend:
-    "We could not load your account after sign-in. The app database is usually missing, out of date, or unreachable. Locally: stop the dev server, run `npx prisma db push` (add `--force-reset` only if you intend to wipe data), then `npm run db:seed`, and sign in again. On Vercel or other hosts: set `DATABASE_URL` and apply the same Prisma schema (push or migrate) so the User table exists.",
-  dev_login:
-    "Developer sign-in failed unexpectedly. Check the terminal for [dev-login-bypass] logs. Prefer a normal browser tab at http://localhost:3000 (not only the editor preview) so cookies apply reliably.",
-  dev_login_disabled: "Developer sign-in is disabled in this environment (not development and ENABLE_DEV_LOGIN_BYPASS is unset).",
-  dev_login_supabase:
-    "Developer sign-in needs Supabase: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local (see .env.example).",
-  dev_login_service_role:
-    "Add SUPABASE_SERVICE_ROLE_KEY to .env.local (Supabase Dashboard → Project Settings → API → service_role). Restart the dev server after saving.",
-  dev_login_email: "Dev login only allows ashley@ymbs.pro.",
-  dev_login_prisma_user:
-    "No Prisma user for ashley@ymbs.pro. From the project root run: npx prisma db push && npm run db:seed",
-  dev_login_link:
-    "Supabase could not issue a magic link for this user (generateLink failed). Check service role key, Supabase Auth logs, and that the email exists in Supabase Auth.",
-  dev_login_verify:
-    "Session could not be created after the magic link step (verifyOtp failed). Try again; if it persists, confirm anon key matches your Supabase project and redirect URLs include this origin.",
+    "We could not load your account after sign-in due to an unexpected server error. Check deployment logs. If this persists after fixing the database (see other messages above), contact support.",
 };
 
-function useAuthTrace(showDevLogin: boolean) {
+function useAuthTrace() {
+  const dev = process.env.NODE_ENV === "development";
   return useCallback(
     (...args: unknown[]) => {
-      if (showDevLogin || process.env.NODE_ENV === "development") {
-        console.log("[auth:trace]", ...args);
-      }
+      if (dev) console.log("[auth:trace]", ...args);
     },
-    [showDevLogin],
+    [dev],
   );
 }
 
@@ -120,9 +111,9 @@ function useLoginPointerDebug(enabled: boolean, trace: (...args: unknown[]) => v
   }, [enabled, trace]);
 }
 
-export function LoginForm({ showDevLogin = false }: { showDevLogin?: boolean }) {
-  const trace = useAuthTrace(showDevLogin);
-  useLoginPointerDebug(showDevLogin || process.env.NODE_ENV === "development", trace);
+export function LoginForm() {
+  const trace = useAuthTrace();
+  useLoginPointerDebug(process.env.NODE_ENV === "development", trace);
 
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/overview";
@@ -354,15 +345,6 @@ export function LoginForm({ showDevLogin = false }: { showDevLogin?: boolean }) 
           : `Enter the code sent to ${email.trim().toLowerCase()}.`}
       </p>
 
-      {showDevLogin ? (
-        <DevDeveloperSignInSection
-          trace={trace}
-          safeNext={
-            callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/overview"
-          }
-        />
-      ) : null}
-
       {error || urlError ? (
         <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950 ring-1 ring-amber-200/80" role="alert">
           {error ?? (urlError ? OAUTH_ERROR_MESSAGES[urlError] ?? urlError : "")}
@@ -517,52 +499,6 @@ export function LoginForm({ showDevLogin = false }: { showDevLogin?: boolean }) 
           Back to home
         </Link>
       </div>
-    </div>
-  );
-}
-
-/**
- * Dev bypass: plain <a href> → GET /api/auth/dev-login (302 + Set-Cookie).
- * Root issue when clicks “do nothing”: React onClick/fetch never runs in some embedded/preview browsers;
- * full navigation does not depend on JS handlers. Do not use next/link here (prefetch would hit GET).
- */
-function DevDeveloperSignInSection({
-  safeNext,
-  trace,
-}: {
-  safeNext: string;
-  trace: (...args: unknown[]) => void;
-}) {
-  const href = `/api/auth/dev-login?next=${encodeURIComponent(safeNext)}`;
-
-  return (
-    <div
-      className="relative z-[100] mt-6 rounded-xl border border-dashed border-amber-300/90 bg-amber-50/50 px-4 py-4 text-left shadow-sm ring-1 ring-amber-200/60 pointer-events-auto"
-      role="region"
-      aria-label="Developer sign in"
-    >
-      <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900/90">Developer sign in</p>
-      <p className="mt-1 text-xs text-amber-950/80">
-        Uses a real browser navigation (GET + redirect) so sign-in works even when JS click handlers are blocked.
-        Same origin as this tab — safe for localhost, LAN IP, and any dev port.
-      </p>
-      <a
-        href={href}
-        className="mt-3 flex w-full cursor-pointer items-center justify-center rounded-lg border border-amber-800/30 bg-white px-3 py-2.5 text-center text-sm font-semibold text-amber-950 shadow-sm hover:bg-amber-50"
-        onPointerDown={() => trace("[dev-login] <a> pointerdown (native)", { href })}
-        onClick={() => {
-          trace("[dev-login] <a> click (native, before navigation)", {
-            href,
-            origin: typeof window !== "undefined" ? window.location.origin : "",
-          });
-          writeTrustedDeviceMarker();
-        }}
-      >
-        Sign in as Ashley
-      </a>
-      <p className="mt-2 text-[10px] text-amber-900/70">
-        POST fallback: same URL with fetch from DevTools if you need JSON + Set-Cookie debugging.
-      </p>
     </div>
   );
 }

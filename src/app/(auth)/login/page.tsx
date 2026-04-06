@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
-import { isDevLoginBypassEnabled } from "@/lib/auth/dev-login-bypass";
 import { getAppAuth } from "@/lib/auth/get-app-auth";
 
 function safeCallbackPath(callbackUrl: string | string[] | undefined): string {
@@ -32,15 +31,13 @@ export default async function LoginPage({
     redirect(`/auth/post-signin?next=${encodeURIComponent(next)}`);
   }
 
-  const showDevLogin = isDevLoginBypassEnabled();
-
   return (
     <Suspense
       fallback={
         <div className="rounded-2xl border border-stone-200 bg-white p-8 text-center text-stone-600">Loading…</div>
       }
     >
-      <LoginForm showDevLogin={showDevLogin} />
+      <LoginForm />
     </Suspense>
   );
 }

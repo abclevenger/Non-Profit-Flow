@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { loginErrorParamFromGetAppAuthFailure } from "@/lib/auth/get-app-auth-failure";
 import { getAppAuth } from "@/lib/auth/get-app-auth";
 import { ACTIVE_AGENCY_COOKIE } from "@/lib/auth/active-agency-cookie";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/lib/auth/active-org-cookie";
@@ -61,7 +62,8 @@ export async function GET(request: Request) {
     session = await getAppAuth();
   } catch (err) {
     console.error("[post-signin] getAppAuth failed", err);
-    return NextResponse.redirect(new URL("/login?error=auth_backend", url.origin));
+    const errorKey = loginErrorParamFromGetAppAuthFailure(err);
+    return NextResponse.redirect(new URL(`/login?error=${errorKey}`, url.origin));
   }
   if (!session?.user?.id) {
     return NextResponse.redirect(new URL("/login", url.origin));

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isDevAuthBypassActive } from "@/lib/auth/dev-auth-bypass-flags";
 import { getAppAuth } from "@/lib/auth/get-app-auth";
 import { prisma } from "@/lib/prisma";
 import { createServiceRoleSupabaseClient, isServiceRoleConfigured } from "@/lib/supabase/admin";
@@ -10,6 +11,10 @@ export const dynamic = "force-dynamic";
  * Enables `auth.uid()` RLS on tenant tables. Call once after login (idempotent).
  */
 export async function POST() {
+  if (isDevAuthBypassActive()) {
+    return NextResponse.json({ ok: true, skipped: "DISABLE_APP_AUTH" });
+  }
+
   const session = await getAppAuth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

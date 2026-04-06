@@ -8,6 +8,7 @@ import type { AppSession } from "./app-session";
 import { getActiveAgencyIdFromCookie } from "./active-agency-cookie";
 import { getActiveOrganizationIdFromCookie } from "./active-org-cookie";
 import { isMemberRole, type MemberRole } from "./roles";
+import { devBypassUserEmail, isDevAuthBypassActive } from "./dev-auth-bypass-flags";
 import { emptyWorkspaceSessionState, loadOrgSessionState } from "./sessionOrganizations";
 import { ensureDemoUserFlagOnUser } from "@/lib/demo/demo-agency-member";
 
@@ -17,10 +18,97 @@ function roleFromDb(value: string | undefined | null): MemberRole {
 }
 
 /**
+ * Insecure dev-only: full platform-admin session without Supabase cookies.
+ * See `DISABLE_APP_AUTH` in `.env.example`.
+ */
+async function getBypassAppAuth(): Promise<AppSession | null> {
+  if (process.env.NODE_ENV === "development") {
+    console.warn(
+      "[auth] DISABLE_APP_AUTH is on — using Prisma-only platform-admin session (not for production).",
+    );
+  }
+  const email = devBypassUserEmail();
+  let dbUser = await prisma.user.findUnique({ where: { email } });
+  if (dbUser && !dbUser.isPlatformAdmin) {
+    dbUser = await prisma.user.update({
+      where: { id: dbUser.id },
+      data: { isPlatformAdmin: true, role: "ADMIN" },
+    });
+  }
+  if (!dbUser) {
+    dbUser = await prisma.user.findFirst({
+      where: { isPlatformAdmin: true },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+  if (!dbUser) {
+    dbUser = await prisma.user.create({
+      data: {
+        email,
+        name: "Dev bypass admin",
+        role: "ADMIN",
+        isPlatformAdmin: true,
+      },
+    });
+  }
+
+  await ensureDemoUserFlagOnUser(prisma, dbUser.id, dbUser.email);
+  dbUser = await prisma.user.findUnique({ where: { id: dbUser.id } });
+  if (!dbUser) return null;
+
+  const preferredOrg = await getActiveOrganizationIdFromCookie();
+  const preferredAgency = await getActiveAgencyIdFromCookie();
+  let orgState;
+  try {
+    orgState = await loadOrgSessionState(dbUser.id, preferredOrg, {
+      isPlatformAdmin: true,
+      preferredAgencyId: preferredAgency,
+    });
+  } catch (err) {
+    console.error("[getAppAuth] bypass loadOrgSessionState failed; using empty workspace", err);
+    orgState = emptyWorkspaceSessionState();
+  }
+  const legacyRole = roleFromDb(String(dbUser.role));
+  const displayName = dbUser.name?.trim() || email;
+
+  return {
+    user: {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: displayName,
+      image: dbUser.image || null,
+      isPlatformAdmin: true,
+      isDemoUser: Boolean(dbUser.isDemoUser),
+      role: orgState.organizations.length > 0 ? orgState.effectiveMemberRole : legacyRole,
+      agencies: orgState.agencies,
+      activeAgencyId: orgState.activeAgencyId,
+      activeAgency: orgState.activeAgency,
+      agencyMembershipRole: orgState.agencyMembershipRole,
+      isAgencyOwner: orgState.isAgencyOwner,
+      canManageAgency: orgState.canManageAgency,
+      agencyScopeIsAll: orgState.agencyScopeIsAll,
+      organizations: orgState.organizations,
+      activeOrganizationId: orgState.activeOrganizationId,
+      activeOrganization: orgState.activeOrganization,
+      activeMembership: orgState.activeMembership,
+      membershipRole: orgState.membershipRole,
+      canManageOrganizationSettings: orgState.canManageOrganizationSettings,
+      canManageIssueRouting: orgState.canManageIssueRouting,
+      canViewAllExpertReviewsInOrg: orgState.canViewAllExpertReviewsInOrg,
+    },
+  };
+}
+
+/**
  * Server-only: Supabase session + Prisma user + org state.
  * Creates a Prisma `User` on first sign-in (email OTP) if missing.
+ * Sets `supabaseAuthId` to `auth.users.id` for RLS / `organization_members` sync.
  */
 export async function getAppAuth(): Promise<AppSession | null> {
+  if (isDevAuthBypassActive()) {
+    return getBypassAppAuth();
+  }
+
   const cookieStore = await cookies();
   const supabase = tryCreateServerSupabaseClient(cookieStore);
   if (!supabase) return null;
@@ -37,12 +125,13 @@ export async function getAppAuth(): Promise<AppSession | null> {
   if (authError || !su?.email) return null;
 
   const email = su.email.toLowerCase();
+  const name =
+    (typeof su.user_metadata?.full_name === "string" && su.user_metadata.full_name) ||
+    (typeof su.user_metadata?.name === "string" && su.user_metadata.name) ||
+    null;
+
   let dbUser = await prisma.user.findUnique({ where: { email } });
   if (!dbUser) {
-    const name =
-      (typeof su.user_metadata?.full_name === "string" && su.user_metadata.full_name) ||
-      (typeof su.user_metadata?.name === "string" && su.user_metadata.name) ||
-      null;
     dbUser = await prisma.user.create({
       data: {
         email,
@@ -54,6 +143,11 @@ export async function getAppAuth(): Promise<AppSession | null> {
     dbUser = await prisma.user.update({
       where: { id: dbUser.id },
       data: { supabaseAuthId: su.id },
+    });
+  } else if (name && dbUser.name !== name) {
+    dbUser = await prisma.user.update({
+      where: { id: dbUser.id },
+      data: { name },
     });
   }
 
@@ -73,7 +167,7 @@ export async function getAppAuth(): Promise<AppSession | null> {
     console.error("[getAppAuth] loadOrgSessionState failed; using empty workspace", err);
     orgState = emptyWorkspaceSessionState();
   }
-  const legacyRole = roleFromDb(dbUser.role);
+  const legacyRole = roleFromDb(String(dbUser.role));
 
   const image =
     (typeof su.user_metadata?.avatar_url === "string" && su.user_metadata.avatar_url) || dbUser.image || null;

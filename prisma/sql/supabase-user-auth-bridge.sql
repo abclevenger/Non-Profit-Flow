@@ -1,0 +1,13 @@
+-- Reference SQL: Prisma public."User" ↔ auth.users (apply manually in Supabase SQL editor if desired)
+--
+-- 1) Credentials: only auth.users (Supabase Auth). App user row holds profile + tenancy FKs.
+-- 2) Link column: "User"."supabaseAuthId" uuid NULL UNIQUE — set by app on Supabase sign-in.
+-- 3) Tenant RLS: see supabase/migrations/*tenant* and organization_members policies.
+--
+-- Optional FK (only if every linked row has a matching auth user):
+-- ALTER TABLE public."User"
+--   ADD CONSTRAINT user_supabase_auth_fk
+--   FOREIGN KEY ("supabaseAuthId") REFERENCES auth.users (id) ON DELETE SET NULL;
+--
+-- Optional table comment (run after "User" exists):
+-- COMMENT ON TABLE public."User" IS 'App profile; link supabaseAuthId to auth.users.id';

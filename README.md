@@ -135,17 +135,17 @@ The product name is **Non-Profit Flow**; metadata and UI copy use this branding.
 
 ---
 
-Built as a **discussion and planning preview** Ã¢â‚¬â€ not live data and not legal advice.
+Built as a **discussion and planning preview** — not live data and not legal advice.
 
 ## Authentication
 
-- **Stack:** Auth.js v5 (`next-auth`), **Prisma + SQLite** (local dev), **JWT sessions**, optional **Google** and **Microsoft Entra ID** SSO via env vars in `.env.example`.
-- **Sign-in:** `/login` Ã¢â‚¬â€ email as username, password, and **6-digit TOTP** when required. Standard `autocomplete` attributes support password managers.
-- **Password policy:** 12+ characters with uppercase, lowercase, number, and symbol Ã¢â‚¬â€ see [`src/lib/password-policy.ts`](src/lib/password-policy.ts).
-- **2FA:** **Admin** and **Board chair** accounts with `twoFactorEnabled` must provide a valid authenticator code (`otpauth` / TOTP).
-- **Roles:** Persisted on `User.role` in the database (`ADMIN`, `BOARD_CHAIR`, `BOARD_MEMBER`, `COMMITTEE_MEMBER`, `EXECUTIVE_DIRECTOR`, `GUEST`). Labels in [`src/lib/auth/roles.ts`](src/lib/auth/roles.ts); permission matrix in [`src/lib/auth/permissions.ts`](src/lib/auth/permissions.ts) for future module gates.
-- **Registration:** `/register` creates **board member** accounts; promote roles via database or future admin UI.
-- **Recovery:** `/forgot-password` Ã¢â€ â€™ `/reset-password?token=Ã¢â‚¬Â¦` Ã¢â‚¬â€ one-hour tokens in `VerificationToken`. In **development**, the forgot-password API returns `devHint.resetLink` so you are not locked out; in production, send the link by email instead.
-- **First run:** `cp .env.example .env` (set `AUTH_SECRET`), `npx prisma db push`, `npx prisma db seed`. Seeded demo: `admin@board.demo` / `BoardAdmin1!z9` + TOTP secret printed in the seed log; `member@board.demo` / `MemberPass1!z9` (no 2FA).
-- **Routes:** `/` is a public landing page; dashboard routes require a session ([`src/middleware.ts`](src/middleware.ts) uses `getToken` for Edge compatibility).
+- **Stack:** **Supabase Auth** (email OTP, OAuth such as LinkedIn per project settings), **Prisma + Postgres** (Supabase), HTTP-only session cookies refreshed in [`src/proxy.ts`](src/proxy.ts), app session from [`/api/auth/me`](src/app/api/auth/me/route.ts).
+- **Sign-in:** `/login` — email one-time code (and configured OAuth providers). Configure redirect URLs in Supabase and env vars per [`.env.example`](.env.example).
+- **Password policy:** Used by `/register` and `/reset-password` — see [`src/lib/password-policy.ts`](src/lib/password-policy.ts).
+- **2FA fields:** `User.twoFactorEnabled` / `twoFactorSecret` exist for future use; the current UI flow does not verify TOTP at login.
+- **Roles:** Effective permissions are **per organization** via `OrganizationMembership.role` (see [`src/lib/organizations/membershipRole.ts`](src/lib/organizations/membershipRole.ts)). `User.role` is a legacy coarse default; [`src/lib/auth/roles.ts`](src/lib/auth/roles.ts) and [`src/lib/auth/permissions.ts`](src/lib/auth/permissions.ts) support module gates.
+- **Registration:** `/register` creates Prisma `User` rows with `passwordHash` (useful for demos); production sign-up is normally via Supabase Auth.
+- **Recovery:** `/forgot-password` → `/reset-password?token=…` — one-hour tokens in `VerificationToken` for password-hash accounts. In **development**, the API may return `devHint.resetLink`; in production, email the link.
+- **First run:** `cp .env.example .env`, set `DATABASE_URL`, `DIRECT_URL`, and Supabase keys, then `npx prisma db push`, `npm run db:seed`. Seeded demo passwords and optional TOTP secret are printed in the seed log.
+- **Routes:** `/` is public; protected pages require a Supabase session. Request interception lives in [`src/proxy.ts`](src/proxy.ts) (Next.js 16 **Proxy** convention).
 

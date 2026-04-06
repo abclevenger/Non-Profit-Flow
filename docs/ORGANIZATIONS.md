@@ -17,7 +17,7 @@ This app is built for **many organizations** sharing one product. Each organizat
   - `session.user.activeOrganization` — full branding + modules for the active org
   - Flags: `canManageOrganizationSettings`, `canManageIssueRouting`, `canViewAllExpertReviewsInOrg` (all **per active org membership**)
 
-Switching orgs uses `next-auth` `update({ activeOrganizationId })` from `WorkspaceProvider` — no full page reload.
+Switching orgs uses `WorkspaceProvider`’s `update({ activeOrganizationId })` (from `useAppSession` / `/api/auth/me`) — no full page reload.
 
 ## Client workspace
 

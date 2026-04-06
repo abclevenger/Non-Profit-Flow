@@ -63,6 +63,6 @@ Optional mirror on `tenant_organizations.agency_id`: `supabase/migrations/202604
 - `prisma/seed.ts` — single **Demo Platform Agency** owned by board admin; all demo orgs attach to it.
 - `npm run db:seed:saas` — **Community Impact Partners** (main) + **Riverside Legal Group LLP** (white-label); nonprofits split across agencies; `AgencyMember` rows for Ashley, legal lead, and agency staff.
 
-## SQLite repair
+## Schema drift
 
-If a local DB predates agencies, run `npx prisma db push` (or repair SQL in `prisma/sql/sqlite-repair-dev.sql` comments), then re-seed or backfill `agencyId` on `Organization`.
+If a database predates newer Prisma models, run `npx prisma db push` (or `prisma migrate deploy` in production), then re-seed or backfill `agencyId` on `Organization` as needed.
