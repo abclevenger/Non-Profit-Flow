@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { getPublicAppUrl } from "@/lib/env/public-app-url";
+import { getPasswordRecoveryRedirectTo } from "@/lib/auth/password-recovery-redirect";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 
 const GENERIC_OK_MESSAGE =
@@ -28,16 +28,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Authentication is not configured." }, { status: 503 });
   }
 
-  const base = getPublicAppUrl();
-  const nextPath = "/reset-password";
-  const redirectTo = `${base}/auth/callback?next=${encodeURIComponent(nextPath)}&td=1`;
+  const redirectTo = getPasswordRecoveryRedirectTo();
 
   const sb = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
 
   if (error) {
-    console.error("[forgot-password] resetPasswordForEmail", error.message);
+    console.error("[forgot-password] resetPasswordForEmail", error.message, {
+      redirectHost: (() => {
+        try {
+          return new URL(redirectTo).host;
+        } catch {
+          return "invalid-redirectTo";
+        }
+      })(),
+    });
     /* Still return generic message — do not leak Supabase errors to clients. */
+  } else if (process.env.NODE_ENV === "development") {
+    console.info("[forgot-password] redirectTo (dev)", redirectTo);
   }
 
   return NextResponse.json({
