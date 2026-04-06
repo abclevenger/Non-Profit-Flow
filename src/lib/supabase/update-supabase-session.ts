@@ -2,7 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
-import { getSupabaseAuthCookieOptions } from "./session-cookie-options";
+import {
+  AUTH_PERSIST_TIER_COOKIE,
+  getSupabaseAuthCookieOptions,
+  isLongLivedPersistFromTierCookie,
+} from "./session-cookie-options";
 
 export type SupabaseMiddlewareResult = {
   response: NextResponse;
@@ -33,8 +37,11 @@ export async function updateSupabaseSession(request: NextRequest): Promise<Supab
 
   let supabaseResponse = NextResponse.next({ request });
 
+  const tier = request.cookies.get(AUTH_PERSIST_TIER_COOKIE)?.value;
+  const longLived = isLongLivedPersistFromTierCookie(tier);
+
   const supabase = createServerClient(url, key, {
-    cookieOptions: getSupabaseAuthCookieOptions(),
+    cookieOptions: getSupabaseAuthCookieOptions(longLived),
     cookies: {
       getAll() {
         return request.cookies.getAll();

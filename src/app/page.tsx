@@ -19,8 +19,8 @@ export default function HomePage() {
         <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Nonprofit board governance</p>
         <h1 className="font-serif text-xl font-semibold text-stone-900 sm:text-2xl">Board governance workspace</h1>
         <p className="text-sm leading-relaxed text-stone-600">
-          Sign in with your board email. We send a one-time code — no password. New users are created automatically on first
-          successful sign-in.
+          Sign in with your board email. On a trusted device, use your password; otherwise we send a one-time code or
+          link. Create an account from the registration page when your board invites you.
         </p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
@@ -28,7 +28,7 @@ export default function HomePage() {
           href="/login"
           className="rounded-xl bg-stone-900 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:opacity-90"
         >
-          Sign in with email code
+          Sign in
         </Link>
       </div>
     </div>

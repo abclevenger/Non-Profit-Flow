@@ -1,15 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import type { cookies } from "next/headers";
+import { AUTH_PERSIST_TIER_COOKIE, getSupabaseAuthCookieOptions, isLongLivedPersistFromTierCookie } from "./session-cookie-options";
 import { getSupabaseAnonKey, getSupabaseUrl, isSupabaseConfigured } from "./env";
-import { getSupabaseAuthCookieOptions } from "./session-cookie-options";
 
 type CookieStore = Awaited<ReturnType<typeof cookies>>;
 
 /**
  * Server Components, Server Actions, Route Handlers — anon key + cookie session.
- * Throws if public env is missing (call isSupabaseConfigured() first to avoid).
+ * `longLived` when set overrides the `npf_auth_persist` tier cookie (e.g. OAuth callback before tier is written).
  */
-export function createServerSupabaseClient(cookieStore: CookieStore) {
+export function createServerSupabaseClient(
+  cookieStore: CookieStore,
+  opts?: { longLived?: boolean },
+) {
   const url = getSupabaseUrl();
   const key = getSupabaseAnonKey();
   if (!url || !key) {
@@ -18,8 +21,16 @@ export function createServerSupabaseClient(cookieStore: CookieStore) {
     );
   }
 
+  let longLived = true;
+  if (opts && typeof opts.longLived === "boolean") {
+    longLived = opts.longLived;
+  } else {
+    const tier = cookieStore.get(AUTH_PERSIST_TIER_COOKIE)?.value;
+    longLived = isLongLivedPersistFromTierCookie(tier);
+  }
+
   return createServerClient(url, key, {
-    cookieOptions: getSupabaseAuthCookieOptions(),
+    cookieOptions: getSupabaseAuthCookieOptions(longLived),
     cookies: {
       getAll() {
         return cookieStore.getAll();

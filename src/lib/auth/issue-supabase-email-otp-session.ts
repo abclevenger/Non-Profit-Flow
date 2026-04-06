@@ -29,6 +29,8 @@ export async function issueSupabaseEmailOtpSession(params: {
   email: string;
   nextPath: string;
   cookieStore: CookieStore;
+  /** Dev / seeded flows default long-lived (30-day) cookies. */
+  persistLongLived?: boolean;
 }): Promise<{ ok: true; data: IssueOtpSessionOk } | IssueOtpSessionFail> {
   const rawEmail = params.email.trim().toLowerCase();
   if (!rawEmail) {
@@ -68,8 +70,10 @@ export async function issueSupabaseEmailOtpSession(params: {
   const redirectPath = `/auth/post-signin?next=${encodeURIComponent(params.nextPath)}`;
   const cookieWrites = new Map<string, CookieWrite>();
 
+  const persistLongLived = params.persistLongLived !== false;
+
   const supabase = createServerClient(supabaseUrl, anonKey, {
-    cookieOptions: getSupabaseAuthCookieOptions(),
+    cookieOptions: getSupabaseAuthCookieOptions(persistLongLived),
     cookies: {
       getAll() {
         return params.cookieStore.getAll();

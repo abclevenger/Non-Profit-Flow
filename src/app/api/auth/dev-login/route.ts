@@ -14,6 +14,7 @@ import {
 import { issueSupabaseEmailOtpSession } from "@/lib/auth/issue-supabase-email-otp-session";
 import { prisma } from "@/lib/prisma";
 import { getSupabaseServiceRoleKey, isSupabaseConfigured } from "@/lib/supabase/env";
+import { getAuthPersistTierCookieOptions } from "@/lib/supabase/session-cookie-options";
 
 export const dynamic = "force-dynamic";
 
@@ -142,6 +143,14 @@ function applyAuthCookiesToResponse(res: NextResponse, cookieWrites: Map<string,
   for (const [name, { value, options }] of cookieWrites) {
     res.cookies.set(name, value, options);
   }
+  const tier = getAuthPersistTierCookieOptions("1");
+  res.cookies.set(tier.name, tier.value, {
+    path: tier.path,
+    sameSite: tier.sameSite,
+    maxAge: tier.maxAge,
+    secure: tier.secure,
+    httpOnly: tier.httpOnly,
+  });
   res.cookies.delete(ACTIVE_ORGANIZATION_COOKIE);
   res.cookies.delete(ACTIVE_AGENCY_COOKIE);
   return res;

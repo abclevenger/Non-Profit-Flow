@@ -11,13 +11,26 @@ import { issueSupabaseEmailOtpSession, type CookieWrite } from "@/lib/auth/issue
 import { isSeededPasswordLoginEnabled } from "@/lib/auth/seeded-password-login";
 import { prisma } from "@/lib/prisma";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getAuthPersistTierCookieOptions } from "@/lib/supabase/session-cookie-options";
 
 export const dynamic = "force-dynamic";
 
-function applyAuthCookiesToResponse(res: NextResponse, cookieWrites: Map<string, CookieWrite>): NextResponse {
+function applyAuthCookiesToResponse(
+  res: NextResponse,
+  cookieWrites: Map<string, CookieWrite>,
+  longLived: boolean,
+): NextResponse {
   for (const [name, { value, options }] of cookieWrites) {
     res.cookies.set(name, value, options);
   }
+  const tier = getAuthPersistTierCookieOptions(longLived ? "1" : "0");
+  res.cookies.set(tier.name, tier.value, {
+    path: tier.path,
+    sameSite: tier.sameSite,
+    maxAge: tier.maxAge,
+    secure: tier.secure,
+    httpOnly: tier.httpOnly,
+  });
   res.cookies.delete(ACTIVE_ORGANIZATION_COOKIE);
   res.cookies.delete(ACTIVE_AGENCY_COOKIE);
   return res;
@@ -25,15 +38,21 @@ function applyAuthCookiesToResponse(res: NextResponse, cookieWrites: Map<string,
 
 /**
  * Verifies Prisma `passwordHash` and issues the same Supabase cookie session as email OTP / dev-login.
+ * `trustDevice` maps to long- vs short-lived auth cookies (see session-cookie-options).
  */
 export async function POST(request: Request) {
   if (!isSeededPasswordLoginEnabled()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  let body: { email?: string; password?: string; next?: string };
+  let body: { email?: string; password?: string; next?: string; trustDevice?: boolean };
   try {
-    body = (await request.json()) as { email?: string; password?: string; next?: string };
+    body = (await request.json()) as {
+      email?: string;
+      password?: string;
+      next?: string;
+      trustDevice?: boolean;
+    };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -41,6 +60,7 @@ export async function POST(request: Request) {
   const email =
     typeof body.email === "string" && body.email.trim() ? body.email.trim().toLowerCase() : "";
   const password = typeof body.password === "string" ? body.password : "";
+  const trustDevice = body.trustDevice !== false;
   const nextPath =
     typeof body.next === "string" && body.next.startsWith("/") && !body.next.startsWith("//")
       ? body.next
@@ -69,6 +89,7 @@ export async function POST(request: Request) {
       email,
       nextPath,
       cookieStore,
+      persistLongLived: trustDevice,
     });
 
     if (!issued.ok) {
@@ -79,7 +100,7 @@ export async function POST(request: Request) {
       ok: true as const,
       redirect: issued.data.redirectPath,
     });
-    res = applyAuthCookiesToResponse(res, issued.data.cookieWrites);
+    res = applyAuthCookiesToResponse(res, issued.data.cookieWrites, trustDevice);
     return res;
   } catch (err) {
     console.error("[seeded-password-login]", messageFromUnknownError(err), err);

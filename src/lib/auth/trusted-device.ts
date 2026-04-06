@@ -1,7 +1,8 @@
 /**
  * Client-only: 30-day “trust this device” marker (localStorage + first-party cookie flag).
- * Does not store secrets — records opt-in for long idle timeout + calendar re-auth at expiry.
- * Supabase auth cookies use the same 30-day maxAge via `getSupabaseAuthCookieOptions()` (see lib/supabase).
+ * Does not store secrets — records opt-in for calendar re-auth at expiry.
+ * Cookie max-age for Supabase sessions is driven by `npf_auth_persist` + `getSupabaseAuthCookieOptions()`
+ * (see `session-cookie-options.ts`); this marker is for UX and forced re-auth after 30 days.
  */
 
 export const TRUSTED_DEVICE_STORAGE_KEY = "npf_trusted_device_v1";

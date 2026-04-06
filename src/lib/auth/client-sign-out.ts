@@ -1,5 +1,6 @@
 "use client";
 
+import { clearAuthPersistTierCookie } from "@/lib/auth/auth-persist-tier";
 import { clearOauthTrustIntent, clearTrustedDeviceMarker } from "@/lib/auth/trusted-device";
 
 function clearAppBrowserStorage(): void {
@@ -16,6 +17,7 @@ function clearAppBrowserStorage(): void {
   }
   clearOauthTrustIntent();
   clearTrustedDeviceMarker();
+  clearAuthPersistTierCookie();
 }
 
 /**

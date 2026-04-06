@@ -1,11 +1,9 @@
 /**
- * Prisma `User.passwordHash` (bcrypt) sign-in, then Supabase session via admin magic-link OTP.
- * Enabled in development by default; on production only when ALLOW_SEEDED_PASSWORD_LOGIN is set.
+ * Prisma `User.passwordHash` (bcrypt) sign-in, then Supabase session via server-side OTP verify
+ * (no email to the user). Disabled in production only when DISABLE_PRISMA_PASSWORD_LOGIN is set.
  */
 export function isSeededPasswordLoginEnabled(): boolean {
-  if (process.env.NODE_ENV === "production") {
-    const v = process.env.ALLOW_SEEDED_PASSWORD_LOGIN?.trim().toLowerCase();
-    return v === "1" || v === "true" || v === "yes";
-  }
-  return true;
+  if (process.env.NODE_ENV !== "production") return true;
+  const d = process.env.DISABLE_PRISMA_PASSWORD_LOGIN?.trim().toLowerCase();
+  return !(d === "1" || d === "true" || d === "yes");
 }

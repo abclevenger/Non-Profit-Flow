@@ -87,10 +87,17 @@ export function AppAuthProvider({ children }: { children: ReactNode }) {
         const { createBrowserSupabaseClient } = await import("@/lib/supabase/browser");
         sb = createBrowserSupabaseClient();
 
-        // Stale/expired trust marker must not call signOut(): onAuthStateChange can run
-        // between verifyOtp and writeTrustedDeviceMarker and would wipe a brand-new session.
+        /**
+         * Trusted-device window elapsed (30 days) — end Supabase session so the user must use email code again.
+         * Skips wiping a session that never had a trust marker (unchecked “trust” uses short cookies only).
+         */
         if (trustedDeviceExpiryRequiresReauth()) {
           clearTrustedDeviceMarker();
+          try {
+            await sb.auth.signOut();
+          } catch {
+            /* ignore */
+          }
         }
 
         const { data } = await sb.auth.getSession();

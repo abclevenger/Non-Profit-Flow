@@ -34,8 +34,13 @@ export function AuthReadyBoundary({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isPublic || status !== "unauthenticated") {
-      setUnauthRedirectAllowed(false);
-      return;
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (!cancelled) setUnauthRedirectAllowed(false);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
     const t = window.setTimeout(() => {
       if (process.env.NODE_ENV === "development") {
@@ -84,7 +89,10 @@ export function AuthReadyBoundary({ children }: { children: ReactNode }) {
         role="status"
         aria-live="polite"
       >
-        Redirecting to sign in…
+        <p>Redirecting to sign in…</p>
+        <p className="max-w-sm text-xs text-stone-500">
+          Use the email code we send you, or request a new one on the login page.
+        </p>
       </div>
     );
   }

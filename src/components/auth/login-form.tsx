@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
+  clearPendingAuthPersist,
+  setAuthPersistTierCookie,
+  setPendingAuthPersist,
+} from "@/lib/auth/auth-persist-tier";
+import {
   clearOauthTrustIntent,
   clearTrustedDeviceMarker,
   setOauthTrustIntent,
@@ -137,13 +142,7 @@ export function LoginForm() {
   const [resendHint, setResendHint] = useState<string | null>(null);
   const [resendCooldownSec, setResendCooldownSec] = useState(0);
   const [trustDevice, setTrustDevice] = useState(true);
-  const [seedEmail, setSeedEmail] = useState("");
-  const [seedPassword, setSeedPassword] = useState("");
-  const [seedPwdPending, setSeedPwdPending] = useState(false);
-
-  const showSeededPasswordLogin =
-    process.env.NODE_ENV === "development" ||
-    process.env.NEXT_PUBLIC_SHOW_SEEDED_PASSWORD_LOGIN === "1";
+  const [password, setPassword] = useState("");
 
   const resendCooldownActive = resendCooldownSec > 0;
   useEffect(() => {
@@ -179,7 +178,7 @@ export function LoginForm() {
     try {
       const sb = createBrowserSupabaseClient();
       const safeNext = callbackUrl.startsWith("/") ? callbackUrl : "/overview";
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}&td=${trustDevice ? "1" : "0"}`;
       const { error: err } = await sb.auth.signInWithOAuth({
         provider: "linkedin_oidc",
         options: { redirectTo },
@@ -196,8 +195,7 @@ export function LoginForm() {
     }
   }
 
-  async function sendOtp(e: React.FormEvent) {
-    e.preventDefault();
+  async function sendOtpFlow() {
     setError(null);
     setResendHint(null);
     setPending(true);
@@ -210,7 +208,7 @@ export function LoginForm() {
       trace("sendOtp start", { email: normalized, origin: window.location.origin });
       const sb = createBrowserSupabaseClient();
       const safeNext = callbackUrl.startsWith("/") ? callbackUrl : "/overview";
-      const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+      const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}&td=${trustDevice ? "1" : "0"}`;
       trace("sendOtp emailRedirectTo", emailRedirectTo);
       const { error: err } = await sb.auth.signInWithOtp({
         email: normalized,
@@ -248,6 +246,54 @@ export function LoginForm() {
     }
   }
 
+  async function signInWithPrismaPassword() {
+    setError(null);
+    setPending(true);
+    const normalized = email.trim().toLowerCase();
+    const pwd = password;
+    if (!normalized || !pwd) {
+      setError("Enter your email and password.");
+      setPending(false);
+      return;
+    }
+    try {
+      const safeNext =
+        callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/overview";
+      const r = await fetch("/api/auth/seeded-password-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: normalized,
+          password: pwd,
+          next: safeNext,
+          trustDevice,
+        }),
+      });
+      const j = (await r.json()) as { ok?: boolean; redirect?: string; error?: string; code?: string };
+      if (!r.ok) {
+        const hint =
+          j.code && OAUTH_ERROR_MESSAGES[j.code] ? OAUTH_ERROR_MESSAGES[j.code] : j.error ?? "Could not sign in";
+        setError(hint);
+        return;
+      }
+      if (trustDevice) {
+        writeTrustedDeviceMarker();
+      } else {
+        clearTrustedDeviceMarker();
+      }
+      const serverReady = await waitForServerSession(5000);
+      trace("password sign-in ok, /api/auth/me ready=", serverReady);
+      if (j.redirect) {
+        window.location.assign(`${window.location.origin}${j.redirect}`);
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Sign-in failed.");
+    } finally {
+      setPending(false);
+    }
+  }
+
   async function resendOtp() {
     setError(null);
     setResendHint(null);
@@ -260,7 +306,7 @@ export function LoginForm() {
     try {
       const sb = createBrowserSupabaseClient();
       const safeNext = callbackUrl.startsWith("/") ? callbackUrl : "/overview";
-      const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+      const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}&td=${trustDevice ? "1" : "0"}`;
       trace("resendOtp emailRedirectTo", emailRedirectTo);
       const { error: err } = await sb.auth.signInWithOtp({
         email: normalized,
@@ -283,45 +329,6 @@ export function LoginForm() {
     }
   }
 
-  async function signInWithSeededPassword(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSeedPwdPending(true);
-    const normalized = seedEmail.trim().toLowerCase();
-    if (!normalized || !seedPassword) {
-      setSeedPwdPending(false);
-      return;
-    }
-    try {
-      const safeNext =
-        callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/overview";
-      const r = await fetch("/api/auth/seeded-password-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          email: normalized,
-          password: seedPassword,
-          next: safeNext,
-        }),
-      });
-      const j = (await r.json()) as { ok?: boolean; redirect?: string; error?: string; code?: string };
-      if (!r.ok) {
-        const hint =
-          j.code && OAUTH_ERROR_MESSAGES[j.code] ? OAUTH_ERROR_MESSAGES[j.code] : j.error ?? "Could not sign in";
-        setError(hint);
-        return;
-      }
-      if (j.redirect) {
-        window.location.assign(`${window.location.origin}${j.redirect}`);
-      }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Sign-in failed.");
-    } finally {
-      setSeedPwdPending(false);
-    }
-  }
-
   async function verifyOtp(e: React.FormEvent) {
     e.preventDefault();
     clearOauthTrustIntent();
@@ -335,6 +342,7 @@ export function LoginForm() {
     }
     try {
       trace("verifyOtp start", { email: normalized });
+      setPendingAuthPersist(trustDevice);
       const sb = createBrowserSupabaseClient();
       const { error: err } = await sb.auth.verifyOtp({
         email: normalized,
@@ -343,10 +351,13 @@ export function LoginForm() {
       });
       if (err) {
         trace("verifyOtp supabase error", err.message);
+        clearPendingAuthPersist();
         setError(err.message);
         setPending(false);
         return;
       }
+      setAuthPersistTierCookie(trustDevice);
+      clearPendingAuthPersist();
       // Apply trust marker before any further await so onAuthStateChange → fetchSession
       // does not treat an old expired marker as “sign out” during this sign-in.
       if (trustDevice) {
@@ -373,6 +384,7 @@ export function LoginForm() {
         `${window.location.origin}/auth/post-signin?next=${encodeURIComponent(safeNext)}`,
       );
     } catch (caught) {
+      clearPendingAuthPersist();
       const msg = caught instanceof Error ? caught.message : "Verification failed.";
       trace("verifyOtp catch", caught);
       setError(msg);
@@ -396,9 +408,23 @@ export function LoginForm() {
       </div>
       <h1 className="font-serif text-2xl font-semibold text-stone-900">Sign in</h1>
       <p className="mt-2 text-sm text-stone-600">
-        {step === "email"
-          ? "Enter your email. We will send a one-time sign-in code (check spam)."
-          : `Enter the code sent to ${email.trim().toLowerCase()}.`}
+        {step === "email" ? (
+          trustDevice ? (
+            <>
+              With <span className="font-medium text-stone-800">Trust this device</span> on, sign in with your email and
+              password — we won&apos;t email a code or magic link. Uncheck it if you prefer a one-time code (better on
+              shared computers). If you&apos;re already signed in here, we&apos;ll open the app.
+            </>
+          ) : (
+            <>
+              We&apos;ll send a <span className="font-medium text-stone-800">one-time code</span> (or a link in the same
+              email). No password on this path. Check <span className="font-medium text-stone-800">Trust this device</span>{" "}
+              above if you want to use your password instead.
+            </>
+          )
+        ) : (
+          <>Enter the code we sent to {email.trim().toLowerCase()}.</>
+        )}
       </p>
 
       {error || urlError ? (
@@ -450,7 +476,13 @@ export function LoginForm() {
       ) : null}
 
       {step === "email" ? (
-        <form onSubmit={sendOtp} className="mt-6 space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void (trustDevice ? signInWithPrismaPassword() : sendOtpFlow());
+          }}
+          className="mt-6 space-y-4"
+        >
           <div>
             <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-wide text-stone-500">
               Email
@@ -469,14 +501,34 @@ export function LoginForm() {
           <TrustDeviceCheckbox
             id="trust-device-email"
             checked={trustDevice}
-            onCheckedChange={setTrustDevice}
+            onCheckedChange={(v) => {
+              setTrustDevice(v);
+              if (!v) setPassword("");
+            }}
           />
+          {trustDevice ? (
+            <div>
+              <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-wide text-stone-500">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-900 shadow-sm outline-none ring-stone-200 focus:ring-2"
+              />
+            </div>
+          ) : null}
           <button
             type="submit"
             disabled={pending}
             className="w-full rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60"
           >
-            {pending ? "Sending…" : "Send code"}
+            {pending ? (trustDevice ? "Signing in…" : "Sending…") : trustDevice ? "Sign in with password" : "Send code"}
           </button>
 
           <div className="relative py-2">
@@ -498,56 +550,6 @@ export function LoginForm() {
             {oauthPending ? "Redirecting…" : "Continue with LinkedIn"}
           </button>
 
-          {showSeededPasswordLogin ? (
-            <details className="mt-4 rounded-lg border border-stone-200 bg-stone-50/80 p-3 text-left">
-              <summary className="cursor-pointer text-sm font-semibold text-stone-800">
-                Seeded account (password)
-              </summary>
-              <p className="mt-2 text-xs text-stone-600">
-                For Prisma users with <code className="rounded bg-stone-100 px-1">passwordHash</code> from{" "}
-                <code className="rounded bg-stone-100 px-1">npm run db:seed</code> (e.g.{" "}
-                <span className="font-medium text-stone-800">admin@board.demo</span>). Requires{" "}
-                <code className="rounded bg-stone-100 px-1">SUPABASE_SERVICE_ROLE_KEY</code> to mint a Supabase
-                session.
-              </p>
-              <form onSubmit={(ev) => void signInWithSeededPassword(ev)} className="mt-3 space-y-2">
-                <div>
-                  <label htmlFor="seed-email" className="block text-xs font-semibold text-stone-500">
-                    Email
-                  </label>
-                  <input
-                    id="seed-email"
-                    type="email"
-                    autoComplete="username"
-                    value={seedEmail}
-                    onChange={(ev) => setSeedEmail(ev.target.value)}
-                    placeholder="admin@board.demo"
-                    className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm outline-none ring-stone-200 focus:ring-2"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="seed-password" className="block text-xs font-semibold text-stone-500">
-                    Password
-                  </label>
-                  <input
-                    id="seed-password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={seedPassword}
-                    onChange={(ev) => setSeedPassword(ev.target.value)}
-                    className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm outline-none ring-stone-200 focus:ring-2"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={seedPwdPending || pending || oauthPending}
-                  className="w-full rounded-lg border border-stone-400 bg-white px-3 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 disabled:opacity-60"
-                >
-                  {seedPwdPending ? "Signing in…" : "Sign in with seeded password"}
-                </button>
-              </form>
-            </details>
-          ) : null}
         </form>
       ) : (
         <form onSubmit={verifyOtp} className="mt-6 space-y-4">
@@ -631,8 +633,9 @@ function TrustDeviceCheckbox({
       <span>
         <span className="font-medium text-stone-900">Trust this device for 30 days</span>
         <span className="mt-0.5 block text-xs text-stone-500">
-          Keeps this browser signed in for up to 30 days (session refresh + longer idle timeout). Uncheck on shared
-          computers — you&apos;ll sign out sooner when idle.
+          When checked, sign in with your password (we don&apos;t email a code) and cookies can last up to 30 days
+          until you sign out or the trust period ends. When unchecked, we email a one-time code and use a shorter
+          session — better on shared computers.
         </span>
       </span>
     </label>
