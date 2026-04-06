@@ -29,17 +29,40 @@ export function RegisterForm() {
           password,
         }),
       });
-      const data = (await res.json()) as { error?: string; details?: string[] };
+      const raw = await res.text();
+      let data: { error?: string; details?: string[]; ok?: boolean } = {};
+      if (raw) {
+        try {
+          data = JSON.parse(raw) as typeof data;
+        } catch {
+          setError(
+            res.ok
+              ? "Unexpected response from the server."
+              : `Registration failed (HTTP ${res.status}). The server did not return JSON — often a crash or proxy error.`,
+          );
+          if (process.env.NODE_ENV === "development") {
+            setDetails([raw.slice(0, 400)]);
+          }
+          return;
+        }
+      }
       if (!res.ok) {
-        setError(data.error ?? "Registration failed");
+        setError(data.error ?? `Registration failed (${res.status})`);
         if (data.details?.length) setDetails(data.details);
-        setPending(false);
         return;
       }
       router.push("/login?registered=1");
       router.refresh();
-    } catch {
-      setError("Network error");
+    } catch (err) {
+      const isOffline = err instanceof TypeError && /fetch|network|load failed/i.test(String(err.message));
+      setError(
+        isOffline
+          ? "Could not reach the server. Check your connection and try again."
+          : err instanceof Error
+            ? err.message
+            : "Something went wrong. Try again.",
+      );
+    } finally {
       setPending(false);
     }
   }
