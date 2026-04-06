@@ -42,13 +42,23 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   missing_code: "Sign-in link was incomplete. Try again.",
   config: "Authentication is not configured.",
   db_env:
-    "`DATABASE_URL` is not set (or not visible to the server). Add it to `.env` / `.env.local` locally, or under Vercel → Project → Settings → Environment Variables for Production and Preview, then redeploy. This app expects Supabase Postgres pooler + direct URLs (`DATABASE_URL` / `DIRECT_URL`) as documented in `.env.example`.",
+    "The server cannot see `DATABASE_URL` (and Prisma needs `DIRECT_URL` too). Local: add both next to `package.json` in `.env` or `.env.local`, then restart the dev server. Deployed: Vercel → Project → Settings → Environment Variables — set them for Preview and Production, then redeploy. `DISABLE_APP_AUTH` does not remove the need for a database URL.",
   db_connect:
-    "The app could not reach the database (wrong URL, network, or database paused). Confirm `DATABASE_URL` points to a running instance, IP allowlists allow Vercel if applicable, and try again.",
+    "Could not open a database connection (wrong URL, paused Supabase project, firewall, or IPv6-only host from Vercel — try Supabase IPv4 pooler add-on, or confirm `DATABASE_URL` / `DIRECT_URL` match the Supabase dashboard).",
+  db_pool:
+    "The database refused the connection (pool exhausted or too many Prisma clients). On Vercel, ensure a single Prisma client is reused (singleton); on Supabase, check connection limits and pooler mode (`pgbouncer=true` on `DATABASE_URL`).",
   db_schema:
     "The database exists but tables or columns are missing or out of date. Locally: stop the dev server, run `npx prisma db push`, then `npm run db:seed`. On a hosted DB: run `npx prisma migrate deploy` (or `db push`) against that database, then redeploy.",
   auth_backend:
-    "We could not load your account after sign-in due to an unexpected server error. Check deployment logs. If this persists after fixing the database (see other messages above), contact support.",
+    "We could not load your account after sign-in (database or app error). Check deployment logs for the real stack trace — it is often a data constraint or Prisma error, not a dead database.",
+  dev_login: "Dev sign-in failed. See server logs.",
+  dev_login_disabled: "Dev login API is disabled.",
+  dev_login_supabase: "Supabase URL/anon key missing for dev login.",
+  dev_login_service_role: "Add SUPABASE_SERVICE_ROLE_KEY for dev or seeded-password sign-in.",
+  dev_login_email: "This email is not allowed for dev login.",
+  dev_login_prisma_user: "No Prisma user for this email — run npm run db:seed.",
+  dev_login_link: "Could not issue Supabase magic link (service role / Auth settings).",
+  dev_login_verify: "Could not verify dev sign-in with Supabase.",
 };
 
 function useAuthTrace() {
@@ -127,6 +137,13 @@ export function LoginForm() {
   const [resendHint, setResendHint] = useState<string | null>(null);
   const [resendCooldownSec, setResendCooldownSec] = useState(0);
   const [trustDevice, setTrustDevice] = useState(true);
+  const [seedEmail, setSeedEmail] = useState("");
+  const [seedPassword, setSeedPassword] = useState("");
+  const [seedPwdPending, setSeedPwdPending] = useState(false);
+
+  const showSeededPasswordLogin =
+    process.env.NODE_ENV === "development" ||
+    process.env.NEXT_PUBLIC_SHOW_SEEDED_PASSWORD_LOGIN === "1";
 
   const resendCooldownActive = resendCooldownSec > 0;
   useEffect(() => {
@@ -263,6 +280,45 @@ export function LoginForm() {
       setError(caught instanceof Error ? caught.message : "We could not resend the code. Try again shortly.");
     } finally {
       setPending(false);
+    }
+  }
+
+  async function signInWithSeededPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSeedPwdPending(true);
+    const normalized = seedEmail.trim().toLowerCase();
+    if (!normalized || !seedPassword) {
+      setSeedPwdPending(false);
+      return;
+    }
+    try {
+      const safeNext =
+        callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/overview";
+      const r = await fetch("/api/auth/seeded-password-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: normalized,
+          password: seedPassword,
+          next: safeNext,
+        }),
+      });
+      const j = (await r.json()) as { ok?: boolean; redirect?: string; error?: string; code?: string };
+      if (!r.ok) {
+        const hint =
+          j.code && OAUTH_ERROR_MESSAGES[j.code] ? OAUTH_ERROR_MESSAGES[j.code] : j.error ?? "Could not sign in";
+        setError(hint);
+        return;
+      }
+      if (j.redirect) {
+        window.location.assign(`${window.location.origin}${j.redirect}`);
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Sign-in failed.");
+    } finally {
+      setSeedPwdPending(false);
     }
   }
 
@@ -441,6 +497,57 @@ export function LoginForm() {
             <LinkedInGlyph />
             {oauthPending ? "Redirecting…" : "Continue with LinkedIn"}
           </button>
+
+          {showSeededPasswordLogin ? (
+            <details className="mt-4 rounded-lg border border-stone-200 bg-stone-50/80 p-3 text-left">
+              <summary className="cursor-pointer text-sm font-semibold text-stone-800">
+                Seeded account (password)
+              </summary>
+              <p className="mt-2 text-xs text-stone-600">
+                For Prisma users with <code className="rounded bg-stone-100 px-1">passwordHash</code> from{" "}
+                <code className="rounded bg-stone-100 px-1">npm run db:seed</code> (e.g.{" "}
+                <span className="font-medium text-stone-800">admin@board.demo</span>). Requires{" "}
+                <code className="rounded bg-stone-100 px-1">SUPABASE_SERVICE_ROLE_KEY</code> to mint a Supabase
+                session.
+              </p>
+              <form onSubmit={(ev) => void signInWithSeededPassword(ev)} className="mt-3 space-y-2">
+                <div>
+                  <label htmlFor="seed-email" className="block text-xs font-semibold text-stone-500">
+                    Email
+                  </label>
+                  <input
+                    id="seed-email"
+                    type="email"
+                    autoComplete="username"
+                    value={seedEmail}
+                    onChange={(ev) => setSeedEmail(ev.target.value)}
+                    placeholder="admin@board.demo"
+                    className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm outline-none ring-stone-200 focus:ring-2"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="seed-password" className="block text-xs font-semibold text-stone-500">
+                    Password
+                  </label>
+                  <input
+                    id="seed-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={seedPassword}
+                    onChange={(ev) => setSeedPassword(ev.target.value)}
+                    className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm outline-none ring-stone-200 focus:ring-2"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={seedPwdPending || pending || oauthPending}
+                  className="w-full rounded-lg border border-stone-400 bg-white px-3 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 disabled:opacity-60"
+                >
+                  {seedPwdPending ? "Signing in…" : "Sign in with seeded password"}
+                </button>
+              </form>
+            </details>
+          ) : null}
         </form>
       ) : (
         <form onSubmit={verifyOtp} className="mt-6 space-y-4">

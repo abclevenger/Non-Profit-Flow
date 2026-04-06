@@ -7,8 +7,8 @@ import { tryCreateServerSupabaseClient } from "@/lib/supabase/server";
 import type { AppSession } from "./app-session";
 import { getActiveAgencyIdFromCookie } from "./active-agency-cookie";
 import { getActiveOrganizationIdFromCookie } from "./active-org-cookie";
-import { isMemberRole, type MemberRole } from "./roles";
 import { devBypassUserEmail, isDevAuthBypassActive } from "./dev-auth-bypass-flags";
+import { isMemberRole, type MemberRole } from "./roles";
 import { emptyWorkspaceSessionState, loadOrgSessionState } from "./sessionOrganizations";
 import { ensureDemoUserFlagOnUser } from "@/lib/demo/demo-agency-member";
 
@@ -99,30 +99,8 @@ async function getBypassAppAuth(): Promise<AppSession | null> {
   };
 }
 
-/**
- * Server-only: Supabase session + Prisma user + org state.
- * Creates a Prisma `User` on first sign-in (email OTP) if missing.
- * Sets `supabaseAuthId` to `auth.users.id` for RLS / `organization_members` sync.
- */
-export async function getAppAuth(): Promise<AppSession | null> {
-  if (isDevAuthBypassActive()) {
-    return getBypassAppAuth();
-  }
-
-  const cookieStore = await cookies();
-  const supabase = tryCreateServerSupabaseClient(cookieStore);
-  if (!supabase) return null;
-
-  let su: User | null = null;
-  let authError: Awaited<ReturnType<typeof supabase.auth.getUser>>["error"] = null;
-  try {
-    const res = await supabase.auth.getUser();
-    authError = res.error;
-    su = res.data?.user ?? null;
-  } catch {
-    return null;
-  }
-  if (authError || !su?.email) return null;
+async function getAppAuthFromSupabaseUser(su: User): Promise<AppSession | null> {
+  if (!su.email) return null;
 
   const email = su.email.toLowerCase();
   const name =
@@ -198,4 +176,33 @@ export async function getAppAuth(): Promise<AppSession | null> {
       canViewAllExpertReviewsInOrg: orgState.canViewAllExpertReviewsInOrg,
     },
   };
+}
+
+/**
+ * Server-only: Supabase session + Prisma user + org state.
+ * Creates a Prisma `User` on first sign-in (email OTP) if missing.
+ *
+ * Order matters: a valid Supabase user always wins over `DISABLE_APP_AUTH` bypass
+ * (otherwise magic-link sign-in would still impersonate the bypass user).
+ */
+export async function getAppAuth(): Promise<AppSession | null> {
+  const cookieStore = await cookies();
+  const supabase = tryCreateServerSupabaseClient(cookieStore);
+
+  if (supabase) {
+    try {
+      const res = await supabase.auth.getUser();
+      if (!res.error && res.data.user?.email) {
+        return await getAppAuthFromSupabaseUser(res.data.user);
+      }
+    } catch (err) {
+      console.error("[getAppAuth] supabase.auth.getUser failed", err);
+    }
+  }
+
+  if (isDevAuthBypassActive()) {
+    return getBypassAppAuth();
+  }
+
+  return null;
 }

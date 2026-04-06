@@ -1,26 +1,19 @@
-import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { ACTIVE_AGENCY_COOKIE } from "@/lib/auth/active-agency-cookie";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/lib/auth/active-org-cookie";
 import {
-  loginErrorParamFromGetAppAuthFailure,
-  messageFromUnknownError,
-} from "@/lib/auth/get-app-auth-failure";
-import {
   DEV_BYPASS_ALLOWED_EMAIL,
   isAllowedDevBypassEmail,
   isDevLoginBypassEnabled,
 } from "@/lib/auth/dev-login-bypass";
-import { prisma } from "@/lib/prisma";
-import { createServiceRoleSupabaseClient } from "@/lib/supabase/admin";
 import {
-  getSupabaseAnonKey,
-  getSupabaseServiceRoleKey,
-  getSupabaseUrl,
-  isSupabaseConfigured,
-} from "@/lib/supabase/env";
-import { getSupabaseAuthCookieOptions } from "@/lib/supabase/session-cookie-options";
+  loginErrorParamFromGetAppAuthFailure,
+  messageFromUnknownError,
+} from "@/lib/auth/get-app-auth-failure";
+import { issueSupabaseEmailOtpSession } from "@/lib/auth/issue-supabase-email-otp-session";
+import { prisma } from "@/lib/prisma";
+import { getSupabaseServiceRoleKey, isSupabaseConfigured } from "@/lib/supabase/env";
 
 export const dynamic = "force-dynamic";
 
@@ -96,9 +89,6 @@ async function runDevLoginIssueSession(input: {
     };
   }
 
-  const supabaseUrl = getSupabaseUrl()!;
-  const anonKey = getSupabaseAnonKey()!;
-
   let dbUser = await prisma.user.findUnique({
     where: { email: input.rawEmail },
     select: { id: true, isPlatformAdmin: true },
@@ -121,68 +111,30 @@ async function runDevLoginIssueSession(input: {
     dbUser = { id: dbUser.id, isPlatformAdmin: true };
   }
 
-  const admin = createServiceRoleSupabaseClient("api/auth/dev-login");
-
-  const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-    type: "magiclink",
-    email: input.rawEmail,
-  });
-
-  if (linkErr || !linkData?.properties?.email_otp) {
-    console.error("[dev-login-bypass] generateLink failed:", linkErr?.message ?? "no otp");
-    return {
-      ok: false,
-      code: "dev_login_link",
-      httpStatus: 500,
-      message: "Could not issue dev credentials",
-    };
-  }
-
-  const otp = linkData.properties.email_otp;
-
-  /**
-   * Always land via `/auth/post-signin` (same as email OTP). Jumping straight to `/platform-admin` skipped that
-   * hop; some clients and the dashboard shell then hit harder failures (500 / “page isn’t working”) when
-   * cookies or Prisma state were not ready the same way as the normal sign-in path.
-   */
-  const redirectPath = `/auth/post-signin?next=${encodeURIComponent(input.nextPath)}`;
-
   const cookieStore = await cookies();
-  const cookieWrites = new Map<string, CookieWrite>();
-
-  const supabase = createServerClient(supabaseUrl, anonKey, {
-    cookieOptions: getSupabaseAuthCookieOptions(),
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet) {
-        for (const { name, value, options } of cookiesToSet) {
-          cookieWrites.set(name, { value, options });
-        }
-      },
-    },
-  });
-
-  const { error: verifyErr } = await supabase.auth.verifyOtp({
+  const issued = await issueSupabaseEmailOtpSession({
     email: input.rawEmail,
-    token: otp,
-    type: "email",
+    nextPath: input.nextPath,
+    cookieStore,
   });
 
-  if (verifyErr) {
-    console.error("[dev-login-bypass] verifyOtp failed:", verifyErr.message);
+  if (!issued.ok) {
+    const isVerify = /establish session/i.test(issued.message);
     return {
       ok: false,
-      code: "dev_login_verify",
-      httpStatus: 500,
-      message: "Could not establish session",
+      code: isVerify ? "dev_login_verify" : "dev_login_link",
+      httpStatus: issued.httpStatus,
+      message: issued.message,
     };
   }
 
   return {
     ok: true,
-    data: { redirectPath, cookieWrites, rawEmail: input.rawEmail },
+    data: {
+      redirectPath: issued.data.redirectPath,
+      cookieWrites: issued.data.cookieWrites,
+      rawEmail: issued.data.email,
+    },
   };
 }
 

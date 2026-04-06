@@ -25,8 +25,11 @@ export function messageFromUnknownError(err: unknown): string {
 
 function loginErrorParamFromMessageBlob(msg: string): string {
   if (!msg.trim()) return "auth_backend";
-  if (/DATABASE_URL|Environment variable not found|P1013|invalid.*database string/i.test(msg)) {
+  if (/DATABASE_URL|DIRECT_URL|Environment variable not found|P1013|invalid.*database string/i.test(msg)) {
     return "db_env";
+  }
+  if (/P2024|P2037|P1008|too many connections|connection pool|pool timeout|prepared statement/i.test(msg)) {
+    return "db_pool";
   }
   if (
     /P1001|P1003|P1017|Can't reach database|connection.*refused|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|getaddrinfo|timed out/i.test(
@@ -35,7 +38,7 @@ function loginErrorParamFromMessageBlob(msg: string): string {
   ) {
     return "db_connect";
   }
-  if (/P2021|P2022|P2010|relation .+ does not exist|table .+ does not exist/i.test(msg)) {
+  if (/P2021|P2022|P2010|relation .+ does not exist|table .+ does not exist|column .+ does not exist/i.test(msg)) {
     return "db_schema";
   }
   return "auth_backend";
@@ -46,23 +49,27 @@ function loginErrorParamFromMessageBlob(msg: string): string {
  */
 export function loginErrorParamFromGetAppAuthFailure(err: unknown): string {
   if (err instanceof PrismaClientInitializationError) {
-    if (/DATABASE_URL|Environment variable not found/i.test(err.message)) {
+    if (/DATABASE_URL|DIRECT_URL|Environment variable not found/i.test(err.message)) {
       return "db_env";
     }
     return "db_connect";
   }
   if (err instanceof PrismaClientKnownRequestError) {
     switch (err.code) {
-      case "P1001": // can't reach server
-      case "P1003": // db does not exist
-      case "P1017": // server closed connection
+      case "P1001":
+      case "P1003":
+      case "P1017":
+      case "P1008":
         return "db_connect";
-      case "P2021": // table does not exist
-      case "P2022": // column does not exist
-      case "P2010": // raw query failed
+      case "P2024":
+      case "P2037":
+        return "db_pool";
+      case "P2021":
+      case "P2022":
+      case "P2010":
         return "db_schema";
       default:
-        return "db_schema";
+        return "auth_backend";
     }
   }
   return loginErrorParamFromMessageBlob(messageFromUnknownError(err));
